@@ -24,30 +24,25 @@ type DataStoreManager struct {
 
 func (manager *DataStoreManager) Start (){
 	go manager.run()
-	//go manager.checker()
+	go manager.checker()
 }
 
 func (manager *DataStoreManager) run (){
 	for {
 		element := <- manager.packetChannel
 		manager.StorePacket(element)
-		//check if grpc wants to push a subscriber to the map
-		select {
-			case <- manager.receiversCoordinator.Call:
-				manager.receiversCoordinator.Ack <- true
-				<- manager.receiversCoordinator.Done
-			default:
-		}
 		//this call is necessary so that the goroutine doesn't use too many cpu time at once
 		runtime.Gosched()
 	}
 }
 
 func (manager *DataStoreManager) checker (){
-	//TODO: refactor function to databundle
 	//check all RxTimes on data and set to 0 when RX greater than 4 seconds
 	for t := range manager.ticker.C {
 		manager.rtDataStoreMutex.Lock()
+		count := 0
+		paramLen := len(manager.rtData)
+		data := make([]gstypes.RealTimeStreamElement,paramLen)
 		currentTime := t.Unix()
 		fmt.Println("checking...\n")
 		for _, rtStreamElement := range manager.rtData{
@@ -58,7 +53,14 @@ func (manager *DataStoreManager) checker (){
 				rtStreamElement.Data.Float64Value = 0
 				rtStreamElement.Data.RxTime = time.Now().Unix()
 				manager.setParameter(rtStreamElement)
+				data[count] = rtStreamElement
+				count++
 			}
+		}
+		if count > 0 {
+			dataBundle := gstypes.RealTimeDataBundle{}
+			dataBundle.Data = data[0:count]
+			manager.sendDataBundle(dataBundle)
 		}
 		manager.rtDataStoreMutex.Unlock()
 	}
@@ -86,9 +88,7 @@ func (manager *DataStoreManager) StorePacket(packet gstypes.PacketStoreElement){
 }
 
 func (manager *DataStoreManager) AddValue(packetName string,rxTime int64, staticElement gstypes.DataStoreElement) gstypes.RealTimeStreamElement{
-	manager.rtDataStoreMutex.Lock()
 	unit := gstypes.RealTimeDataStoreUnit{}
-	unit.RxTime = rxTime
 	switch staticElement.Data.ValueIndex{
 		case 1:
 			unit.Int64Value = int64(staticElement.Data.Int8Value)
@@ -121,6 +121,7 @@ func (manager *DataStoreManager) AddValue(packetName string,rxTime int64, static
 			unit.Float64Value = staticElement.Data.Float64Value
 			unit.ValueIndex = 3
 	}
+	unit.RxTime = rxTime
 	unit.Units = staticElement.Units
 
 	rtDatastoreElement := gstypes.RealTimeStreamElement{}
@@ -128,8 +129,10 @@ func (manager *DataStoreManager) AddValue(packetName string,rxTime int64, static
 	rtDatastoreElement.PacketName = packetName
 	rtDatastoreElement.Data = unit
 
+	manager.rtDataStoreMutex.Lock()
 	manager.setParameter(rtDatastoreElement)
 	manager.rtDataStoreMutex.Unlock()
+
 	return rtDatastoreElement
 }
 
@@ -139,10 +142,18 @@ func (manager *DataStoreManager) setParameter(element gstypes.RealTimeStreamElem
 }
 
 func (manager *DataStoreManager) sendDataBundle(dataBundle gstypes.RealTimeDataBundle){
+	//check if grpc wants to push a subscriber to the map
+	select {
+		case <- manager.receiversCoordinator.Call:
+			manager.receiversCoordinator.Ack <- true
+			<- manager.receiversCoordinator.Done
+		default:
+	}
+	//send the bundle to all subscribers
 	for channel := range manager.receiversChannelHolder.Receivers{
 		select {
-		case *channel <- dataBundle:
-		default: fmt.Printf("streamerchannel is full \n")
+			case *channel <- dataBundle:
+			default: fmt.Printf("streamerchannel is full \n")
 		}
 	}
 }
@@ -159,29 +170,6 @@ func cleanJoin(prefix string, name string) string{
 	}else {
 		fullyFormattedName = name
 	}
-	return fullyFormattedName
-}
-
-func joiner(prefix string, name string) string{
-	var fullyFormattedName string
-	var formattedPrefix string
-	var formattedName string
-
-	prefix = strings.TrimSpace(prefix)
-	name = strings.TrimSpace(name)
-
-	if len(prefix) > 0 {
-		explodedPrefix := strings.Split(prefix," ")
-		formattedPrefix = formatter(explodedPrefix)
-	}
-
-	if len(name) > 0 {
-		explodedName := strings.Split(name, " ")
-		formattedName = formatter(explodedName)
-	}
-
-	s := []string{strings.TrimSpace(formattedPrefix),strings.TrimSpace(formattedName)}
-	fullyFormattedName = strings.Join(s,"")
 	return fullyFormattedName
 }
 
@@ -206,7 +194,7 @@ func New (channelsHolder gsgrpc.ChannelsHolder, packetStoreChannel <- chan gstyp
 		packetChannel:packetStoreChannel,
 		rtData: map[string]gstypes.RealTimeStreamElement{},
 		rtDataStoreMutex: &sync.Mutex{},
-		ticker: time.NewTicker(time.Second*2),
+		ticker: time.NewTicker(time.Second*3),
 		receiversCoordinator:receiversCoordinator}
 	return storeManager
 }
