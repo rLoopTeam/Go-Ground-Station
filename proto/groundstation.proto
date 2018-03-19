@@ -1,0 +1,47 @@
+syntax = "proto3";
+package proto;
+
+service GroundStationService {
+    rpc streamPackets (StreamRequest) returns (stream DataBundle){}
+    rpc sendCommand (Command) returns (Ack){}
+}
+
+message StreamRequest {
+
+}
+
+message Command {
+    string Node = 1;
+    int32 PacketType = 2;
+    repeated int32 Data = 3;
+}
+
+message Ack {
+    
+}
+
+message DataBundle {
+    repeated Params Parameters = 1;
+}
+
+message DataPacket {
+    string PacketName = 1;
+    int32 PacketType = 2;
+    int64 RxTime = 3;
+    repeated Params Parameters = 4;
+}
+
+message Params {
+    string PacketName = 1;
+    string ParamName = 2;
+    int64 RxTime = 3;
+    Value Value = 4;
+    string Units = 5;
+}
+
+message Value {
+    int32 Index = 1;
+    int64 Int64Value = 2;
+    uint64 Uint64Value = 3;
+    double DoubleValue = 4;
+}
