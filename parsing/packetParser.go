@@ -113,25 +113,17 @@ func parsePayload(definition gstypes.PacketDefinition, payloadLength int, port i
 			parseError = errors.New(errMessage)
 			break
 		}
-		//if the current parameter is the last parameter in the loop, we revert back to the first parameter in the loop, else we increment the index to the next parameter in the loop
-		if isInParameterLoop{
-			if currentParameter.EndLoop{
-				isInParameterLoop = false
-				//revert back to the index of the first parameter in the loop
-				currentParameterIndex -= parameterLoopOffset
-			}else{
-				//go to the next parameter
-				currentParameterIndex++
-			}
+		//if the current parameter is the last parameter in the loop
+		//we revert back to the first parameter in the loop
+		//else we increment the index to the next parameter in the loop
+		if isInParameterLoop && currentParameter.EndLoop{
+			isInParameterLoop = false
+			currentParameterIndex -= parameterLoopOffset
 		}else{
-			//if not in a parameter loop, then simply proceed to the next parameter in line
 			currentParameterIndex++
 		}
 		dataStoreElementIdx++
 	}
-	//fmt.Printf("dataStoreElementIndex: %d\n", dataStoreElementIdx)
-	//fmt.Printf("array capacity: %d\n", cap(datastoreElementArray))
-	//fmt.Printf("array len: %d\n", len(datastoreElementArray))
 	packetStoreElement.Parameters = datastoreElementArray[:dataStoreElementIdx]
 	return packetStoreElement, parseError
 }

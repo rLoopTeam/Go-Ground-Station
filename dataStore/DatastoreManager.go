@@ -28,17 +28,23 @@ func (manager *DataStoreManager) Start (){
 }
 
 func (manager *DataStoreManager) run (){
-	//sleepDuration := time.Duration(10)
 	for {
 		element := <- manager.packetChannel
 		manager.StorePacket(element)
+		//check if grpc wants to push a subscriber to the map
+		select {
+			case <- manager.receiversCoordinator.Call:
+				manager.receiversCoordinator.Ack <- true
+				<- manager.receiversCoordinator.Done
+			default:
+		}
+		//this call is necessary so that the goroutine doesn't use too many cpu time at once
 		runtime.Gosched()
-		//time.Sleep(sleepDuration)
-		//fmt.Printf("\n Packet stored in: %d ns \n", (time.Now().UnixNano() - startStoring))
 	}
 }
 
 func (manager *DataStoreManager) checker (){
+	//TODO: refactor function to databundle
 	//check all RxTimes on data and set to 0 when RX greater than 4 seconds
 	for t := range manager.ticker.C {
 		manager.rtDataStoreMutex.Lock()
@@ -130,21 +136,6 @@ func (manager *DataStoreManager) AddValue(packetName string,rxTime int64, static
 func (manager *DataStoreManager) setParameter(element gstypes.RealTimeStreamElement){
 	//update the map
 	manager.rtData[element.ParameterName] = element
-	/*
-	select {
-		case manager.streamerChannel <- streamElement: fmt.Printf("\n data sent to gsgrpc manager\n")
-		default: fmt.Printf("streamerchannel is full \n")
-	}
-	*/
-	select {
-		case <- manager.receiversCoordinator.Call:
-			manager.receiversCoordinator.Ack <- true
-			<- manager.receiversCoordinator.Done
-		default:
-	}
-	//manager.receiversChannelHolder.ReceiverMutex.Lock()
-
-	//manager.receiversChannelHolder.ReceiverMutex.Unlock()
 }
 
 func (manager *DataStoreManager) sendDataBundle(dataBundle gstypes.RealTimeDataBundle){
