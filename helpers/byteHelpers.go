@@ -2,7 +2,7 @@ package helpers
 
 import (
 	"encoding/binary"
-	"Go-Ground-Station/gstypes"
+	"rloop/Go-Ground-Station/gstypes"
 	"go/types"
 	"bytes"
 )

@@ -1,12 +1,12 @@
 package dataStore
 
 import (
-	"Go-Ground-Station/gstypes"
+	"rloop/Go-Ground-Station/gstypes"
 	"strings"
 	"fmt"
 	"time"
 	"sync"
-	"Go-Ground-Station/gsgrpc"
+	"rloop/Go-Ground-Station/gsgrpc"
 	"runtime"
 )
 

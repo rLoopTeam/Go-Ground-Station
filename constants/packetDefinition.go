@@ -1,7 +1,7 @@
 package constants
 
 import(
-	"Go-Ground-Station/gstypes"
+	"rloop/Go-Ground-Station/gstypes"
 	"go/types"
 )
 

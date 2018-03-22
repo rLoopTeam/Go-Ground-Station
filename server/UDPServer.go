@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"Go-Ground-Station/gstypes"
+	"rloop/Go-Ground-Station/gstypes"
 	"strconv"
-	"Go-Ground-Station/constants"
+	"rloop/Go-Ground-Station/constants"
 	"log"
-	"Go-Ground-Station/helpers"
-	"Go-Ground-Station/parsing"
+	"rloop/Go-Ground-Station/helpers"
+	"rloop/Go-Ground-Station/parsing"
 )
 
 type GSUDPServer interface {

@@ -1,13 +1,13 @@
 package gsgrpc
 
 import (
-	"Go-Ground-Station/proto"
-	"Go-Ground-Station/gstypes"
+	"rloop/Go-Ground-Station/proto"
+	"rloop/Go-Ground-Station/gstypes"
 	"fmt"
 	"sync"
 	"google.golang.org/grpc"
 	"net"
-	"Go-Ground-Station/constants"
+	"rloop/Go-Ground-Station/constants"
 	"strconv"
 	"golang.org/x/net/context"
 	"bytes"

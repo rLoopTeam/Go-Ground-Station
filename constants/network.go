@@ -1,6 +1,6 @@
 package constants
 
-import "Go-Ground-Station/gstypes"
+import "rloop/Go-Ground-Station/gstypes"
 
 var (
 	Hosts = map[int]gstypes.Node{

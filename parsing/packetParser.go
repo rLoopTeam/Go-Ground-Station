@@ -1,10 +1,10 @@
 package parsing
 
 import (
-	"Go-Ground-Station/constants"
-	"Go-Ground-Station/gstypes"
+	"rloop/Go-Ground-Station/constants"
+	"rloop/Go-Ground-Station/gstypes"
 	"encoding/binary"
-	"Go-Ground-Station/helpers"
+	"rloop/Go-Ground-Station/helpers"
 	"fmt"
 	"time"
 	"errors"

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"Go-Ground-Station/gsgrpc"
-	"Go-Ground-Station/gstypes"
-	"Go-Ground-Station/dataStore"
-	"Go-Ground-Station/server"
+	"rloop/Go-Ground-Station/dataStore"
+	"rloop/Go-Ground-Station/gsgrpc"
+	"rloop/Go-Ground-Station/gstypes"
+	"rloop/Go-Ground-Station/server"
 )
 
 func main() {

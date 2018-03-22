@@ -4,7 +4,7 @@ import (
 
 	"log"
 	"google.golang.org/grpc"
-	"Go-Ground-Station/proto"
+	"rloop/Go-Ground-Station/proto"
 	"context"
 	"fmt"
 )
