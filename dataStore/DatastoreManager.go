@@ -13,7 +13,6 @@ import (
 type DataStoreManager struct {
 	packetChannel <-chan gstypes.PacketStoreElement
 	receiversChannelHolder gsgrpc.ChannelsHolder
-	rtDataStore RealTimeDataStore
 	ticker *time.Ticker
 	receiversCoordinator gstypes.ReceiversCoordination
 	packetStoreCount int64
@@ -23,7 +22,9 @@ type DataStoreManager struct {
 }
 
 func (manager *DataStoreManager) Start (){
+	fmt.Println("go run manager run")
 	go manager.run()
+	fmt.Println("go run checker")
 	go manager.checker()
 }
 
@@ -37,6 +38,7 @@ func (manager *DataStoreManager) run (){
 }
 
 func (manager *DataStoreManager) checker (){
+	fmt.Println("Checker started")
 	//check all RxTimes on data and set to 0 when RX greater than 4 seconds
 	for t := range manager.ticker.C {
 		manager.rtDataStoreMutex.Lock()
