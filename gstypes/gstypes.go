@@ -41,7 +41,6 @@ type PacketDAQ struct {
 	DataSize   int
 }
 
-
 type PacketStoreElement struct {
 	PacketName string
 	ParameterPrefix string
@@ -71,6 +70,7 @@ type DataStoreUnit struct {
 
 type RealTimeDataStoreUnit struct {
 	RxTime int64
+	IsStale bool
 	Units string
 	ValueIndex int
 	Int64Value int64

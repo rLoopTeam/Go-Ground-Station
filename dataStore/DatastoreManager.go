@@ -2,11 +2,11 @@ package dataStore
 
 import (
 	"rloop/Go-Ground-Station/gstypes"
+	"rloop/Go-Ground-Station/gsgrpc"
 	"strings"
 	"fmt"
 	"time"
 	"sync"
-	"rloop/Go-Ground-Station/gsgrpc"
 	"runtime"
 )
 
@@ -30,44 +30,13 @@ func (manager *DataStoreManager) Start (){
 func (manager *DataStoreManager) run (){
 	for {
 		element := <- manager.packetChannel
-		manager.StorePacket(element)
+		manager.ProcessNewPacket(element)
 		//this call is necessary so that the goroutine doesn't use too many cpu time at once
 		runtime.Gosched()
 	}
 }
 
-func (manager *DataStoreManager) checker (){
-	fmt.Println("Checker started")
-	//check all RxTimes on data and set to 0 when RX greater than 4 seconds
-	for t := range manager.ticker.C {
-		manager.rtDataStoreMutex.Lock()
-		count := 0
-		paramLen := len(manager.rtData)
-		data := make([]gstypes.RealTimeStreamElement,paramLen)
-		currentTime := t.Unix()
-		fmt.Println("checking...\n")
-		for _, rtStreamElement := range manager.rtData{
-			recordedTime := rtStreamElement.Data.RxTime
-			if (currentTime - recordedTime) > 4{
-				rtStreamElement.Data.Int64Value = 0
-				rtStreamElement.Data.Uint64Value = 0
-				rtStreamElement.Data.Float64Value = 0
-				rtStreamElement.Data.RxTime = time.Now().Unix()
-				manager.setParameter(rtStreamElement)
-				data[count] = rtStreamElement
-				count++
-			}
-		}
-		if count > 0 {
-			dataBundle := gstypes.RealTimeDataBundle{}
-			dataBundle.Data = data[0:count]
-			manager.sendDataBundle(dataBundle)
-		}
-		manager.rtDataStoreMutex.Unlock()
-	}
-}
-
-func (manager *DataStoreManager) StorePacket(packet gstypes.PacketStoreElement){
+func (manager *DataStoreManager) ProcessNewPacket(packet gstypes.PacketStoreElement){
 	rxTime := packet.RxTime
 	packetName := packet.PacketName
 	parameters := packet.Parameters
@@ -80,15 +49,17 @@ func (manager *DataStoreManager) StorePacket(packet gstypes.PacketStoreElement){
 		parameter := parameters[idx]
 		fullyFormattedName := cleanJoin(prefix,parameter.ParameterName)
 		parameter.ParameterName = fullyFormattedName
-		elem := manager.AddValue(packetName,rxTime,parameter)
+		elem := manager.MakeRTSElement(packetName,rxTime,parameter)
 		dataBundle.Data[idx] = elem
 	}
-	manager.sendDataBundle(dataBundle)
+	manager.rtDataStoreMutex.Lock()
+	manager.saveToDataStore(dataBundle)
+	manager.rtDataStoreMutex.Unlock()
 	manager.packetStoreCount++
 	fmt.Printf("stored packet count: %d\n",manager.packetStoreCount)
 }
 
-func (manager *DataStoreManager) AddValue(packetName string,rxTime int64, staticElement gstypes.DataStoreElement) gstypes.RealTimeStreamElement{
+func (manager *DataStoreManager) MakeRTSElement(packetName string,rxTime int64, staticElement gstypes.DataStoreElement) gstypes.RealTimeStreamElement{
 	unit := gstypes.RealTimeDataStoreUnit{}
 	switch staticElement.Data.ValueIndex{
 		case 1:
@@ -124,22 +95,57 @@ func (manager *DataStoreManager) AddValue(packetName string,rxTime int64, static
 	}
 	unit.RxTime = rxTime
 	unit.Units = staticElement.Units
+	unit.IsStale= false
 
 	rtDatastoreElement := gstypes.RealTimeStreamElement{}
 	rtDatastoreElement.ParameterName = staticElement.ParameterName
 	rtDatastoreElement.PacketName = packetName
 	rtDatastoreElement.Data = unit
 
-	manager.rtDataStoreMutex.Lock()
-	manager.setParameter(rtDatastoreElement)
-	manager.rtDataStoreMutex.Unlock()
-
 	return rtDatastoreElement
 }
 
-func (manager *DataStoreManager) setParameter(element gstypes.RealTimeStreamElement){
-	//update the map
-	manager.rtData[element.ParameterName] = element
+func (manager *DataStoreManager) checker (){
+	fmt.Println("Checker started")
+	//check all RxTimes on data and set to 0 when RX greater than 4 seconds
+	for t := range manager.ticker.C {
+		manager.rtDataStoreMutex.Lock()
+		//this variable will be used to slice the array the right size, with the number of zeroed parameters
+		count := 0
+		//the current length or amount of parameters in the datastore
+		paramLen := len(manager.rtData)
+		//make a new array that will be populated with the new values, enough to fit all current parameters
+		data := make([]gstypes.RealTimeStreamElement,paramLen)
+		//used to calculate the time difference and to set the new time
+		//of when the parameters were updated last, only for parameters that will be zeroed
+		currentTime := t.Unix()
+		fmt.Println("checking...\n")
+		for _, rtStreamElement := range manager.rtData{
+			recordedTime := rtStreamElement.Data.RxTime
+			if (currentTime - recordedTime) > 4{
+				rtStreamElement.Data.IsStale = true
+				rtStreamElement.Data.Int64Value = 0
+				rtStreamElement.Data.Uint64Value = 0
+				rtStreamElement.Data.Float64Value = 0
+				rtStreamElement.Data.RxTime = time.Now().Unix()
+				data[count] = rtStreamElement
+				count++
+			}
+		}
+		if count > 0 {
+			dataBundle := gstypes.RealTimeDataBundle{}
+			dataBundle.Data = data[0:count]
+			manager.saveToDataStore(dataBundle)
+		}
+		manager.rtDataStoreMutex.Unlock()
+	}
+}
+
+func (manager *DataStoreManager) saveToDataStore(dataBundle gstypes.RealTimeDataBundle){
+	for _, element := range dataBundle.Data{
+		manager.rtData[element.ParameterName] = element
+	}
+	manager.sendDataBundle(dataBundle)
 }
 
 func (manager *DataStoreManager) sendDataBundle(dataBundle gstypes.RealTimeDataBundle){
@@ -172,20 +178,6 @@ func cleanJoin(prefix string, name string) string{
 		fullyFormattedName = name
 	}
 	return fullyFormattedName
-}
-
-func formatter(explodedString []string) string {
-	formattedString := ""
-	arrayLength := len(explodedString)
-	for i := 0; i < arrayLength; i++ {
-		str := explodedString[i]
-		firstLetter := string(str[0])
-		capitalized := strings.ToUpper(firstLetter)
-		arr := []string{capitalized,string(str[1:])}
-		formatted := strings.Join(arr,"")
-		formattedString += formatted
-	}
-	return formattedString
 }
 
 func New (channelsHolder gsgrpc.ChannelsHolder, packetStoreChannel <- chan gstypes.PacketStoreElement) *DataStoreManager{
