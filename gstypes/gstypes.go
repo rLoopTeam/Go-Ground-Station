@@ -69,10 +69,6 @@ type DataStoreUnit struct {
 	Float64Value float64
 }
 
-type RealTimeDataBundle struct{
-	Data []RealTimeStreamElement
-}
-
 type RealTimeDataStoreUnit struct {
 	RxTime int64
 	Units string
@@ -86,6 +82,10 @@ type RealTimeStreamElement struct {
 	PacketName string
 	ParameterName string
 	Data RealTimeDataStoreUnit
+}
+
+type RealTimeDataBundle struct{
+	Data []RealTimeStreamElement
 }
 
 type Command struct {

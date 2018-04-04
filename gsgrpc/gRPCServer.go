@@ -15,20 +15,15 @@ import (
 )
 
 type GRPCServer struct {
-	streamChannel <-chan gstypes.RealTimeStreamElement
 	commandChannel chan <- gstypes.Command
 	receiversChannelHolder ChannelsHolder
-	receiversCoordinator gstypes.ReceiversCoordination
 }
 
-func (server *GRPCServer) StreamPackets (req *proto.StreamRequest,stream proto.GroundStationService_StreamPacketsServer) error {
+func (srv *GRPCServer) StreamPackets (req *proto.StreamRequest,stream proto.GroundStationService_StreamPacketsServer) error {
 	var err error
 	receiverChannel := make( chan gstypes.RealTimeDataBundle,64)
-	//server.receiversChannelHolder.ReceiverMutex.Lock()
-	server.receiversChannelHolder.Receivers[&receiverChannel] = &receiverChannel
-	//server.receiversChannelHolder.ReceiverMutex.Unlock()
+	srv.addChannelToDatastoreQueue(receiverChannel)
 	fmt.Println("gsgrpc channel pushed to map")
-	//if server.ch != nil {
 		for element := range receiverChannel{
 			dataBundle := proto.DataBundle{}
 			dataArray := make([]*proto.Params,len(element.Data))
@@ -47,27 +42,29 @@ func (server *GRPCServer) StreamPackets (req *proto.StreamRequest,stream proto.G
 			dataBundle.Parameters = dataArray
 			err = stream.Send(&dataBundle)
 			if err != nil {
-				server.receiversChannelHolder.ReceiverMutex.Lock()
-				delete(server.receiversChannelHolder.Receivers, &receiverChannel)
-				server.receiversChannelHolder.ReceiverMutex.Unlock()
-				fmt.Println("closing receiver channel")
+				srv.removeChannelFromDatastoreQueue(receiverChannel)
 				break
 			}else {
 				fmt.Println("sent data to frontend server")
 			}
 		}
-	//}else {
-	//	err = errors.New("channel is undefined")
-	//}
 	return err
 }
 
 func (srv *GRPCServer ) addChannelToDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle){
-	srv.receiversCoordinator.Call <- true
-	<- srv.receiversCoordinator.Ack
+	srv.receiversChannelHolder.Coordinator.Call <- true
+	<- srv.receiversChannelHolder.Coordinator.Ack
 	srv.receiversChannelHolder.Receivers[&receiverChannel] = &receiverChannel
-	srv.receiversCoordinator.Done <- true
+	srv.receiversChannelHolder.Coordinator.Done <- true
+}
 
+func (srv *GRPCServer) removeChannelFromDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle){
+	srv.receiversChannelHolder.Coordinator.Call <- true
+	<- srv.receiversChannelHolder.Coordinator.Ack
+	close(receiverChannel)
+	delete(srv.receiversChannelHolder.Receivers, &receiverChannel)
+	fmt.Println("closing receiver channel")
+	srv.receiversChannelHolder.Coordinator.Done <- true
 }
 
 func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*proto.Ack, error) {
@@ -93,7 +90,7 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 			dataBytesArray[idx] = buf.Bytes()
 		}
 	}
-	//if theres no data or not enough data populate the remaining byte slots with zero value
+	//if there's no data or not enough data populate the remaining byte slots with zero value
 	for idx := dataLength; idx < 4; idx++{
 		var value int32 = 0
 		buf := new(bytes.Buffer)
@@ -122,10 +119,9 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 	return ack, err
 }
 
-func NewGroundStationGrpcServer (grpcChannelsHolder ChannelsHolder, coordinator gstypes.ReceiversCoordination) *GRPCServer{
+func NewGroundStationGrpcServer (grpcChannelsHolder ChannelsHolder) *GRPCServer{
 	server := &GRPCServer{
-		receiversChannelHolder:grpcChannelsHolder,
-		receiversCoordinator:coordinator}
+		receiversChannelHolder:grpcChannelsHolder}
 	return server
 }
 
@@ -147,7 +143,16 @@ func NewGoGrpcServer (GSserver *GRPCServer) (net.Listener, *grpc.Server, error){
 }
 
 func GetChannelsHolder () ChannelsHolder {
+	callChannel := make (chan bool)
+	ackChannel := make (chan bool)
+	doneChannel := make (chan bool)
+	coordinator := gstypes.ReceiversCoordination{
+		Call:callChannel,
+		Ack:ackChannel,
+		Done:doneChannel}
+
 	holder := ChannelsHolder{
+		Coordinator:coordinator,
 		ReceiverMutex: sync.Mutex{},
 		Receivers: make(map[*chan gstypes.RealTimeDataBundle]*chan gstypes.RealTimeDataBundle),
 	}
@@ -156,5 +161,7 @@ func GetChannelsHolder () ChannelsHolder {
 
 type ChannelsHolder struct {
 	ReceiverMutex sync.Mutex
+	//struct that will prevent multiple operations on the channelholder at the same time, sort of mutex
+	Coordinator gstypes.ReceiversCoordination
 	Receivers map[*chan gstypes.RealTimeDataBundle]*chan gstypes.RealTimeDataBundle
 }

@@ -14,7 +14,6 @@ type DataStoreManager struct {
 	packetChannel <-chan gstypes.PacketStoreElement
 	receiversChannelHolder gsgrpc.ChannelsHolder
 	ticker *time.Ticker
-	receiversCoordinator gstypes.ReceiversCoordination
 	packetStoreCount int64
 
 	rtDataStoreMutex *sync.Mutex
@@ -146,9 +145,9 @@ func (manager *DataStoreManager) setParameter(element gstypes.RealTimeStreamElem
 func (manager *DataStoreManager) sendDataBundle(dataBundle gstypes.RealTimeDataBundle){
 	//check if grpc wants to push a subscriber to the map
 	select {
-		case <- manager.receiversCoordinator.Call:
-			manager.receiversCoordinator.Ack <- true
-			<- manager.receiversCoordinator.Done
+		case <- manager.receiversChannelHolder.Coordinator.Call:
+			manager.receiversChannelHolder.Coordinator.Ack <- true
+			<- manager.receiversChannelHolder.Coordinator.Done
 		default:
 	}
 	//send the bundle to all subscribers
@@ -189,14 +188,13 @@ func formatter(explodedString []string) string {
 	return formattedString
 }
 
-func New (channelsHolder gsgrpc.ChannelsHolder, packetStoreChannel <- chan gstypes.PacketStoreElement, receiversCoordinator gstypes.ReceiversCoordination) *DataStoreManager{
+func New (channelsHolder gsgrpc.ChannelsHolder, packetStoreChannel <- chan gstypes.PacketStoreElement) *DataStoreManager{
 	storeManager := &DataStoreManager{
 		packetStoreCount:0,
 		receiversChannelHolder: channelsHolder,
 		packetChannel:packetStoreChannel,
 		rtData: map[string]gstypes.RealTimeStreamElement{},
 		rtDataStoreMutex: &sync.Mutex{},
-		ticker: time.NewTicker(time.Second*3),
-		receiversCoordinator:receiversCoordinator}
+		ticker: time.NewTicker(time.Second*3)}
 	return storeManager
 }
