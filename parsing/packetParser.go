@@ -19,21 +19,21 @@ func ParsePacket(nodePort int, packet []byte, packetStoreChannel chan <- gstypes
 		}
 	}()
 	packetLength := len(packet)
+	//get the index of the last byte of the payload
+	lastPayloadByteIndex := packetLength - 2
 	//get the bytes defining the packet type
 	packetTypeBytes := packet[4:6]
-	//convert the bytes to int
-	packetType := binary.LittleEndian.Uint16(packetTypeBytes)
 	//get the bytes defining the payload length
 	payloadLengthBytes := packet[6:8]
+	//extract the payload bytes
+	payload := packet[8:lastPayloadByteIndex]
+	//convert the bytes to int
+	packetType := binary.LittleEndian.Uint16(packetTypeBytes)
 	//convert the bytes into int
 	payloadLength := binary.LittleEndian.Uint16(payloadLengthBytes)
 	payloadLengthInt := int(payloadLength)
 	//retrieve the definition of the packet
 	definition := constants.PacketDefinitions[packetType]
-	//get the index of the last byte of the payload
-	lastPayloadByteIndex := packetLength - 2
-	//extract the payload bytes
-	payload := packet[8:lastPayloadByteIndex]
 	//make crc check and if correct proceed to parsing
 	//TODO: fix crc
 	packetStoreElement, err := parsePayload(definition, payloadLengthInt,nodePort, payload)
@@ -63,15 +63,20 @@ func parsePayload(definition gstypes.PacketDefinition, payloadLength int, port i
 	//retrieve all the parameters (array of parameter objects)
 	parameters := definition.Parameters
 	isInParameterLoop := false
+	//used in packets where a loop is present
 	parameterLoopOffset := 0
 	currentParameterIndex := 0
-	countParamaters := len(parameters)
+	//countParamaters := len(parameters)
+	//index used in datastore array, where processed parameters are pushed
 	dataStoreElementIdx := 0
-	datastoreElementArray := make([]gstypes.DataStoreElement,countParamaters)
+	//datastoreElementArray := make([]gstypes.DataStoreElement,countParamaters)
 
 	packetStoreElement.PacketName = nodeMetaData.Name
 	packetStoreElement.ParameterPrefix = nodeMetaData.ParameterPrefix
 	packetStoreElement.RxTime = time.Now().Unix()
+
+
+	TestArr := gstypes.NewGSarrayDSE()
 
 	//count he number of params in the loop
 	for _, param := range parameters {
@@ -106,8 +111,10 @@ func parsePayload(definition gstypes.PacketDefinition, payloadLength int, port i
 			dataStoreElement.Data = dataUnit
 			dataStoreElement.Units = currentParameter.Units
 			//fmt.Printf("storing parameter in array with index: %d\n", dataStoreElementIdx)
-			helpers.Push(&datastoreElementArray,dataStoreElementIdx,dataStoreElement)
+			//helpers.Push(&datastoreElementArray,dataStoreElementIdx,dataStoreElement)
 			//fmt.Println("packet stored in array succesful")
+
+			TestArr.Push(dataStoreElement)
 		}else{
 			errMessage := "Parser Error: "  + err.Error()
 			parseError = errors.New(errMessage)
@@ -124,7 +131,9 @@ func parsePayload(definition gstypes.PacketDefinition, payloadLength int, port i
 		}
 		dataStoreElementIdx++
 	}
-	packetStoreElement.Parameters = datastoreElementArray[:dataStoreElementIdx]
+
+	packetStoreElement.Parameters = TestArr.GetSlice()
+	//packetStoreElement.Parameters = datastoreElementArray[:dataStoreElementIdx]
 	return packetStoreElement, parseError
 }
 

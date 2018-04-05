@@ -100,24 +100,12 @@ type ReceiversCoordination struct {
 	Done chan bool
 }
 
-/*
-var Temp  = map[int]string {
-	1: "Int8Value",
-	2: "Int16Value",
-	3: "Int32Value",
-	4: "Int64Value",
-	5: "Uint8Value",
-	6: "Uint16Value",
-	7: "Uint32Value",
-	8: "Uint64Value",
-	9: "FloatValue",
-	10: "Float64Value",
+type GSArrayGeneric struct {
+	Count int
+	Capacity int
+	Data []interface{}
 }
 
-func (dataStore *DataStoreUnit) GetDatastoreUnitValue() reflect.Value {
-	objectValues := reflect.ValueOf(dataStore)
-	field := Temp[dataStore.ValueIndex]
-	fieldValue := reflect.Indirect(objectValues).FieldByName(field)
-	return fieldValue
+type GSArrayDSE struct{
+	array GSArrayGeneric
 }
-*/
