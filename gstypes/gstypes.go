@@ -43,7 +43,9 @@ type PacketDAQ struct {
 
 type PacketStoreElement struct {
 	PacketName string
+	PacketType int
 	ParameterPrefix string
+	Port int
 	RxTime int64
 	Parameters []DataStoreElement
 }

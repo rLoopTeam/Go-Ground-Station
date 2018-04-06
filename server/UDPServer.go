@@ -24,6 +24,7 @@ type UDPListenerServer struct {
 	conn      *net.UDPConn
 	serverPort int
 	ch chan<- gstypes.PacketStoreElement
+	loggerChan chan<-gstypes.PacketStoreElement
 }
 
 func (srv *UDPListenerServer) open(port int) error {
@@ -56,7 +57,7 @@ func (srv *UDPListenerServer) listen() {
 			return
 		}
 		if n > 0 {
-			parsing.ParsePacket(srv.serverPort, buffer[:n], srv.ch, &errCount)
+			parsing.ParsePacket(srv.serverPort, buffer[:n], srv.ch,srv.loggerChan, &errCount)
 		}
 	}
 }
@@ -116,7 +117,7 @@ func serialize(cmd gstypes.Command) ([]byte, error){
 	return bytes, err
 }
 
-func CreateNewUDPServers (channel chan<- gstypes.PacketStoreElement) []GSUDPServer{
+func CreateNewUDPServers (channel chan<- gstypes.PacketStoreElement, loggerChannel chan <- gstypes.PacketStoreElement) []GSUDPServer{
 	//calculate the amount of ports that we'll have to listen to
 	amountNodes := len(constants.Hosts)
 	//create an array that will hold the port numbers
@@ -133,6 +134,7 @@ func CreateNewUDPServers (channel chan<- gstypes.PacketStoreElement) []GSUDPServ
 	for idx:= 0; idx < amountNodes; idx++ {
 		srv := &UDPListenerServer{
 			ch: channel,
+			loggerChan:loggerChannel,
 		}
 		err := srv.open(nodesPorts[idx])
 		if err == nil {

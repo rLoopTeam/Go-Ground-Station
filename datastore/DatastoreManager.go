@@ -1,4 +1,4 @@
-package dataStore
+package datastore
 
 import (
 	"rloop/Go-Ground-Station/gstypes"

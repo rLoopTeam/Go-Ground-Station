@@ -10,7 +10,7 @@ import (
 	"errors"
 )
 
-func ParsePacket(nodePort int, packet []byte, packetStoreChannel chan <- gstypes.PacketStoreElement, errcount *int) {
+func ParsePacket(nodePort int, packet []byte, packetStoreChannel chan <- gstypes.PacketStoreElement, loggerChannel chan <- gstypes.PacketStoreElement, errcount *int) {
 	defer func() {
 		if r := recover(); r != nil {
 			*errcount++
@@ -39,6 +39,7 @@ func ParsePacket(nodePort int, packet []byte, packetStoreChannel chan <- gstypes
 	packetStoreElement, err := parsePayload(definition, payloadLengthInt,nodePort, payload)
 	if err == nil {
 		packetStoreChannel <- packetStoreElement
+		loggerChannel<- packetStoreElement
 	}
 	//testCrc,_ := helpers.isCrcCheck(payloadLengthInt,payload,packet[lastPayloadByteIndex:])
 	//fmt.Printf("CRC check: %t\n", testCrc)
@@ -71,6 +72,8 @@ func parsePayload(definition gstypes.PacketDefinition, payloadLength int, port i
 	dataStoreElementIdx := 0
 	//datastoreElementArray := make([]gstypes.DataStoreElement,countParamaters)
 
+	packetStoreElement.Port = port
+	packetStoreElement.PacketType = definition.PacketType
 	packetStoreElement.PacketName = nodeMetaData.Name
 	packetStoreElement.ParameterPrefix = nodeMetaData.ParameterPrefix
 	packetStoreElement.RxTime = time.Now().Unix()
