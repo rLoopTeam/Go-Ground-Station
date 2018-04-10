@@ -721,6 +721,8 @@ var (
 			map[string]gstypes.NodeInfo{
 				"Power Node B": {
 					"Power B Current Temps", "Power B Temps ", "Power Node B"},
+				"Power Node A": {
+					"Power A Current Temps", "Power A Temps ", "Power Node A"},
 			},
 			0x3201,
 			false,
@@ -733,6 +735,8 @@ var (
 			map[string]gstypes.NodeInfo{
 				"Power Node B": {
 					"Power B Temps Locations", "Power B Temps Loc ", "Power Node B"},
+				"Power Node A": {
+					"Power A Temps Locations", "Power A Temps Loc ", "Power Node A"},
 			},
 			0x3203,
 			false,
@@ -747,6 +751,8 @@ var (
 			map[string]gstypes.NodeInfo{
 				"Power Node B": {
 					"Power B ROM ID", "Power B ROM ", "Power Node B"},
+				"Power Node A": {
+					"Power A ROM ID", "Power A ROM ", "Power Node A"},
 			},
 			0x3205,
 			false,
@@ -765,6 +771,8 @@ var (
 			map[string]gstypes.NodeInfo{
 				"Power Node B": {
 					"Power B BMS", "Power B BMS ", "Power Node B"},
+				"Power Node A": {
+					"Power A BMS", "Power A BMS ", "Power Node A"},
 			},
 			0x3401,
 			false,
@@ -850,6 +858,8 @@ var (
 			map[string]gstypes.NodeInfo{
 				"Power Node B": {
 					"Power B Cooling", "Power B Cooling ", "Power Node B"},
+				"Power Node A": {
+					"Power A Cooling", "Power A Cooling ", "Power Node A"},
 			},
 			0x3601,
 			false,

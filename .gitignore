@@ -55,3 +55,4 @@ projectFilesBackup
 main.exe
 todo.txt
 proto/proto compile cmd.txt
+*.csv

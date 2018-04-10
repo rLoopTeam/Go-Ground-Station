@@ -40,6 +40,8 @@ func ParsePacket(nodePort int, packet []byte, packetStoreChannel chan <- gstypes
 	if err == nil {
 		packetStoreChannel <- packetStoreElement
 		loggerChannel<- packetStoreElement
+	}else{
+		fmt.Println(err)
 	}
 	//testCrc,_ := helpers.isCrcCheck(payloadLengthInt,payload,packet[lastPayloadByteIndex:])
 	//fmt.Printf("CRC check: %t\n", testCrc)

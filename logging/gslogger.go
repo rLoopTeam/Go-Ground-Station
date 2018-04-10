@@ -27,7 +27,7 @@ func (gslogger *Gslogger) Run (){
 	fileName := fmt.Sprintf("gslog_%s-%s-%s_%s%s.csv",day,month,year,hour,minute)
 	headers := []string{"rxtime","port","nodename","packtype","packetname","prefix","parametername","units","value"}
 	file, err := os.Create(fileName)
-	gslogger.checkError("Cannot create file", err)
+	gslogger.checkError("Error Creating log file:", err)
 	defer file.Close()
 
 	writer := csv.NewWriter(file)
@@ -43,7 +43,7 @@ func (gslogger *Gslogger) Run (){
 		for _,param := range parameters{
 			line := []string{rxtime,port,packetType,packetName,parameterPrefix,param.ParameterName,param.Units,param.Data.AsString()}
 			err := writer.Write(line)
-			gslogger.checkError("Cannot write to file", err)
+			gslogger.checkError("Error Writing log file:", err)
 			writer.Flush()
 		}
 	}
