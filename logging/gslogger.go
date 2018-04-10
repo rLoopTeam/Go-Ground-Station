@@ -7,6 +7,8 @@ import (
 	"log"
 	//"time"
 	"strconv"
+	"time"
+	"fmt"
 )
 
 type Gslogger struct {
@@ -14,8 +16,15 @@ type Gslogger struct {
 }
 
 func (gslogger *Gslogger) Run (){
-	//currTime := time.Now().String()
-	fileName := "gslog_" + "test" + ".csv"
+	currTime := time.Now()
+	day := strconv.Itoa(currTime.Day())
+	month := currTime.Month().String()
+	year := strconv.Itoa(currTime.Year())
+	hour := strconv.Itoa(currTime.Hour())
+	minute := strconv.Itoa(currTime.Minute())
+	//seconds := strconv.Itoa(currTime.Second())
+
+	fileName := fmt.Sprintf("gslog_%s-%s-%s_%s%s.csv",day,month,year,hour,minute)
 	headers := []string{"rxtime","port","nodename","packtype","packetname","prefix","parametername","units","value"}
 	file, err := os.Create(fileName)
 	gslogger.checkError("Cannot create file", err)
@@ -40,6 +49,7 @@ func (gslogger *Gslogger) Run (){
 	}
 }
 
+//https://golangcode.com/write-data-to-a-csv-file/
 func (Gslogger)checkError(message string, err error) {
 	if err != nil {
 		log.Fatal(message, err)

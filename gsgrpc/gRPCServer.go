@@ -19,6 +19,10 @@ type GRPCServer struct {
 	receiversChannelHolder ChannelsHolder
 }
 
+func (srv *GRPCServer) Ping (ctx context.Context, cmd *proto.Ping)(*proto.Pong,error){
+	return &proto.Pong{},nil
+}
+
 func (srv *GRPCServer) StreamPackets (req *proto.StreamRequest,stream proto.GroundStationService_StreamPacketsServer) error {
 	var err error
 	receiverChannel := make( chan gstypes.RealTimeDataBundle,64)
@@ -49,22 +53,6 @@ func (srv *GRPCServer) StreamPackets (req *proto.StreamRequest,stream proto.Grou
 			}
 		}
 	return err
-}
-
-func (srv *GRPCServer ) addChannelToDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle){
-	srv.receiversChannelHolder.Coordinator.Call <- true
-	<- srv.receiversChannelHolder.Coordinator.Ack
-	srv.receiversChannelHolder.Receivers[&receiverChannel] = &receiverChannel
-	srv.receiversChannelHolder.Coordinator.Done <- true
-}
-
-func (srv *GRPCServer) removeChannelFromDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle){
-	srv.receiversChannelHolder.Coordinator.Call <- true
-	<- srv.receiversChannelHolder.Coordinator.Ack
-	close(receiverChannel)
-	delete(srv.receiversChannelHolder.Receivers, &receiverChannel)
-	fmt.Println("closing receiver channel")
-	srv.receiversChannelHolder.Coordinator.Done <- true
 }
 
 func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*proto.Ack, error) {
@@ -117,6 +105,22 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 	}
 
 	return ack, err
+}
+
+func (srv *GRPCServer ) addChannelToDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle){
+	srv.receiversChannelHolder.Coordinator.Call <- true
+	<- srv.receiversChannelHolder.Coordinator.Ack
+	srv.receiversChannelHolder.Receivers[&receiverChannel] = &receiverChannel
+	srv.receiversChannelHolder.Coordinator.Done <- true
+}
+
+func (srv *GRPCServer) removeChannelFromDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle){
+	srv.receiversChannelHolder.Coordinator.Call <- true
+	<- srv.receiversChannelHolder.Coordinator.Ack
+	close(receiverChannel)
+	delete(srv.receiversChannelHolder.Receivers, &receiverChannel)
+	fmt.Println("closing receiver channel")
+	srv.receiversChannelHolder.Coordinator.Done <- true
 }
 
 func NewGroundStationGrpcServer (grpcChannelsHolder ChannelsHolder) *GRPCServer{

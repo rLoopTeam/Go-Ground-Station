@@ -4,11 +4,10 @@ package proto;
 service GroundStationService {
     rpc streamPackets (StreamRequest) returns (stream DataBundle){}
     rpc sendCommand (Command) returns (Ack){}
+    rpc ping (Ping) returns (Pong){}
 }
 
-message StreamRequest {
-
-}
+message StreamRequest {}
 
 message Command {
     string Node = 1;
@@ -16,9 +15,11 @@ message Command {
     repeated int32 Data = 3;
 }
 
-message Ack {
-    
-}
+message Ack {}
+
+message Pong {}
+
+message Ping {}
 
 message DataBundle {
     repeated Params Parameters = 1;
