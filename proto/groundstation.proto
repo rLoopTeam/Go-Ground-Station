@@ -5,9 +5,26 @@ service GroundStationService {
     rpc streamPackets (StreamRequest) returns (stream DataBundle){}
     rpc sendCommand (Command) returns (Ack){}
     rpc ping (Ping) returns (Pong){}
+    rpc controlServer (ServerControl) returns (Ack){}
 }
 
 message StreamRequest {}
+
+message ServerControl{
+    enum CommandEnum {
+        LogServiceStart = 0;
+        LogServiceStop = 1;
+        DataStoreManagerStart = 2;
+        DataStoreManagerStop = 3;
+        BroadcasterStart = 4;
+        BroadcasterStop = 5;
+    }
+    CommandEnum Command = 1;
+}
+
+message StartLogCommand {
+    string name = 1;
+}
 
 message Command {
     string Node = 1;

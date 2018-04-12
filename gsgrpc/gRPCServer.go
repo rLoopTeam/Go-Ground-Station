@@ -15,15 +15,16 @@ import (
 )
 
 type GRPCServer struct {
+	serviceChan chan <- *proto.ServerControl
 	commandChannel chan <- gstypes.Command
 	receiversChannelHolder ChannelsHolder
 }
 
-func (srv *GRPCServer) Ping (ctx context.Context, cmd *proto.Ping)(*proto.Pong,error){
+func (srv *GRPCServer) Ping(context.Context, *proto.Ping) (*proto.Pong, error) {
 	return &proto.Pong{},nil
 }
 
-func (srv *GRPCServer) StreamPackets (req *proto.StreamRequest,stream proto.GroundStationService_StreamPacketsServer) error {
+func (srv *GRPCServer) StreamPackets(req *proto.StreamRequest, stream proto.GroundStationService_StreamPacketsServer) error {
 	var err error
 	receiverChannel := make( chan gstypes.RealTimeDataBundle,64)
 	srv.addChannelToDatastoreQueue(receiverChannel)
@@ -107,6 +108,12 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 	return ack, err
 }
 
+func (srv *GRPCServer) ControlServer(ctx context.Context, control *proto.ServerControl) (*proto.Ack, error) {
+	srv.serviceChan <- control
+	return &proto.Ack{}, nil
+}
+
+
 func (srv *GRPCServer ) addChannelToDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle){
 	srv.receiversChannelHolder.Coordinator.Call <- true
 	<- srv.receiversChannelHolder.Coordinator.Ack
@@ -123,13 +130,16 @@ func (srv *GRPCServer) removeChannelFromDatastoreQueue(receiverChannel chan gsty
 	srv.receiversChannelHolder.Coordinator.Done <- true
 }
 
-func NewGroundStationGrpcServer (grpcChannelsHolder ChannelsHolder) *GRPCServer{
+func newGroundStationGrpcServer (grpcChannelsHolder ChannelsHolder,commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl) *GRPCServer{
 	server := &GRPCServer{
-		receiversChannelHolder:grpcChannelsHolder}
+		receiversChannelHolder:grpcChannelsHolder,
+		commandChannel:commandChannel,
+		serviceChan:serviceChan}
 	return server
 }
 
-func NewGoGrpcServer (GSserver *GRPCServer) (net.Listener, *grpc.Server, error){
+func NewGoGrpcServer (grpcChannelsHolder ChannelsHolder, commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl) (net.Listener, *grpc.Server, error){
+	GSserver := newGroundStationGrpcServer(grpcChannelsHolder, commandChannel, serviceChan)
 	var err error
 	var grpcServer *grpc.Server
 

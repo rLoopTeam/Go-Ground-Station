@@ -13,9 +13,16 @@ import (
 
 type Gslogger struct {
 	DataChan <- chan gstypes.PacketStoreElement
+	doRun bool
+	isRunning bool
 }
 
-func (gslogger *Gslogger) Run (){
+func (gslogger *Gslogger) Start(){
+	gslogger.doRun = true
+	gslogger.run()
+}
+
+func (gslogger *Gslogger) run (){
 	currTime := time.Now()
 	day := strconv.Itoa(currTime.Day())
 	month := currTime.Month().String()
@@ -34,6 +41,8 @@ func (gslogger *Gslogger) Run (){
 	writer.Write(headers)
 
 	for data := range gslogger.DataChan {
+		if(!gslogger.doRun){break}
+
 		rxtime := strconv.FormatInt(data.RxTime,10)
 		port := strconv.FormatInt(int64(data.Port),10)
 		packetType := strconv.FormatInt(int64(data.PacketType),10)
@@ -47,6 +56,7 @@ func (gslogger *Gslogger) Run (){
 			writer.Flush()
 		}
 	}
+	gslogger.isRunning = false
 }
 
 //https://golangcode.com/write-data-to-a-csv-file/
@@ -54,4 +64,13 @@ func (Gslogger)checkError(message string, err error) {
 	if err != nil {
 		log.Fatal(message, err)
 	}
+}
+
+func New() (*Gslogger, chan <- gstypes.PacketStoreElement){
+	dataChan := make(chan gstypes.PacketStoreElement, 256)
+	gslogger := &Gslogger{
+		DataChan:dataChan,
+		doRun:false,
+		isRunning:false}
+	return gslogger,dataChan
 }

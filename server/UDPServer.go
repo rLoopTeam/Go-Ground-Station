@@ -17,10 +17,14 @@ type GSUDPServer interface {
 }
 
 type UDPBroadcasterServer struct {
+	isRunning bool
+	doRun bool
 	ch <-chan gstypes.Command
 }
 
 type UDPListenerServer struct {
+	isRunning bool
+	doRun bool
 	conn      *net.UDPConn
 	serverPort int
 	ch chan<- gstypes.PacketStoreElement
@@ -43,13 +47,22 @@ func (srv *UDPListenerServer) open(port int) error {
 }
 
 func (srv *UDPListenerServer) Run(){
-	go srv.listen()
+	srv.doRun = true
+	if !srv.isRunning {
+		srv.listen()
+	}
+}
+
+func (srv *UDPListenerServer) Stop (){
+	srv.doRun = false
 }
 
 func (srv *UDPListenerServer) listen() {
 	buffer := make([]byte, 1024)
 	errCount := 0
+	srv.isRunning = true
 	for {
+		if !srv.doRun {break}
 		n, _, err := srv.conn.ReadFromUDP(buffer[0:])
 
 		if err != nil {
@@ -60,10 +73,18 @@ func (srv *UDPListenerServer) listen() {
 			parsing.ParsePacket(srv.serverPort, buffer[:n], srv.ch,srv.loggerChan, &errCount)
 		}
 	}
+	srv.isRunning = false
 }
 
 func (srv *UDPBroadcasterServer) Run (){
-	go srv.broadcast()
+	srv.doRun = true
+	if !srv.isRunning{
+		srv.broadcast()
+	}
+}
+
+func (srv *UDPBroadcasterServer) Stop (){
+	srv.doRun = false
 }
 
 func (srv *UDPBroadcasterServer) broadcast (){
@@ -78,7 +99,9 @@ func (srv *UDPBroadcasterServer) broadcast (){
 		nodesMap[node.Name] = strconv.Itoa(node.Port)
 	}
 
+	srv.isRunning = true
 	for {
+		if !srv.doRun {break}
 		//retrieve the next command from the channel
 		cmd := <-srv.ch
 		//lookup which port is to be used
@@ -104,6 +127,7 @@ func (srv *UDPBroadcasterServer) broadcast (){
 		}
 		conn.Close()
 	}
+	srv.isRunning = false
 }
 
 func serialize(cmd gstypes.Command) ([]byte, error){
@@ -117,13 +141,13 @@ func serialize(cmd gstypes.Command) ([]byte, error){
 	return bytes, err
 }
 
-func CreateNewUDPServers (channel chan<- gstypes.PacketStoreElement, loggerChannel chan <- gstypes.PacketStoreElement) []GSUDPServer{
+func CreateNewUDPServers (channel chan<- gstypes.PacketStoreElement, loggerChannel chan <- gstypes.PacketStoreElement) []*UDPListenerServer{
 	//calculate the amount of ports that we'll have to listen to
 	amountNodes := len(constants.Hosts)
 	//create an array that will hold the port numbers
 	nodesPorts := make([]int, amountNodes)
 	//create an array that will keep the servers
-	serversArray := make([]GSUDPServer,amountNodes)
+	serversArray := make([]*UDPListenerServer,amountNodes)
 	//populate the nodeports array with the port numbers
 	mapIndex := 0
 	for k := range constants.Hosts {
@@ -133,9 +157,10 @@ func CreateNewUDPServers (channel chan<- gstypes.PacketStoreElement, loggerChann
 	//create and open all the servers
 	for idx:= 0; idx < amountNodes; idx++ {
 		srv := &UDPListenerServer{
+			isRunning: false,
+			doRun: false,
 			ch: channel,
-			loggerChan:loggerChannel,
-		}
+			loggerChan:loggerChannel}
 		err := srv.open(nodesPorts[idx])
 		if err == nil {
 			serversArray[idx] = srv
@@ -146,9 +171,10 @@ func CreateNewUDPServers (channel chan<- gstypes.PacketStoreElement, loggerChann
 	return serversArray
 }
 
-func CreateNewUDPCommandServer(channel <-chan gstypes.Command) GSUDPServer{
+func CreateNewUDPCommandServer(channel <-chan gstypes.Command) *UDPBroadcasterServer{
 	srv := &UDPBroadcasterServer{
 		ch: channel,
-	}
+		isRunning:false,
+		doRun:false}
 	return srv
 }

@@ -11,6 +11,8 @@ import (
 )
 
 type DataStoreManager struct {
+	isRunning bool
+	doRun bool
 	packetChannel <-chan gstypes.PacketStoreElement
 	receiversChannelHolder gsgrpc.ChannelsHolder
 	ticker *time.Ticker
@@ -21,19 +23,29 @@ type DataStoreManager struct {
 }
 
 func (manager *DataStoreManager) Start (){
-	fmt.Println("go run manager run")
-	go manager.run()
-	fmt.Println("go run checker")
-	go manager.checker()
+	manager.doRun = true
+	if !manager.isRunning {
+		fmt.Println("go run manager run")
+		go manager.run()
+		fmt.Println("go run checker")
+		go manager.checker()
+		manager.isRunning = true;
+	}
+}
+
+func (manager *DataStoreManager) Stop(){
+	manager.doRun = false;
 }
 
 func (manager *DataStoreManager) run (){
 	for {
+		if !manager.doRun {break}
 		element := <- manager.packetChannel
 		manager.ProcessNewPacket(element)
 		//this call is necessary so that the goroutine doesn't use too many cpu time at once
 		runtime.Gosched()
 	}
+	manager.isRunning = false
 }
 
 func (manager *DataStoreManager) ProcessNewPacket(packet gstypes.PacketStoreElement){
@@ -109,6 +121,7 @@ func (manager *DataStoreManager) checker (){
 	fmt.Println("Checker started")
 	//check all RxTimes on data and set to 0 when RX greater than 4 seconds
 	for t := range manager.ticker.C {
+		if !manager.doRun {break}
 		manager.rtDataStoreMutex.Lock()
 		//this variable will be used to slice the array the right size, with the number of zeroed parameters
 		count := 0
