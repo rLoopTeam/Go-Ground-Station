@@ -193,7 +193,9 @@ func cleanJoin(prefix string, name string) string{
 	return fullyFormattedName
 }
 
-func New (channelsHolder gsgrpc.ChannelsHolder, packetStoreChannel <- chan gstypes.PacketStoreElement) *DataStoreManager{
+func New (channelsHolder gsgrpc.ChannelsHolder) (*DataStoreManager, chan<- gstypes.PacketStoreElement){
+	//the channel that will be used to transfer data between the parser and the datastoremanager
+	packetStoreChannel := make(chan gstypes.PacketStoreElement,512)
 	storeManager := &DataStoreManager{
 		packetStoreCount:0,
 		receiversChannelHolder: channelsHolder,
@@ -201,5 +203,5 @@ func New (channelsHolder gsgrpc.ChannelsHolder, packetStoreChannel <- chan gstyp
 		rtData: map[string]gstypes.RealTimeStreamElement{},
 		rtDataStoreMutex: &sync.Mutex{},
 		ticker: time.NewTicker(time.Second*3)}
-	return storeManager
+	return storeManager,packetStoreChannel
 }

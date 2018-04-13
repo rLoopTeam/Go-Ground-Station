@@ -171,10 +171,11 @@ func CreateNewUDPServers (channel chan<- gstypes.PacketStoreElement, loggerChann
 	return serversArray
 }
 
-func CreateNewUDPCommandServer(channel <-chan gstypes.Command) *UDPBroadcasterServer{
+func CreateNewUDPCommandServer() (*UDPBroadcasterServer, chan <- gstypes.Command){
+	commandChannel := make(chan gstypes.Command,32)
 	srv := &UDPBroadcasterServer{
-		ch: channel,
+		ch: commandChannel,
 		isRunning:false,
 		doRun:false}
-	return srv
+	return srv,commandChannel
 }

@@ -49,6 +49,7 @@ func (manager *ServiceManager) RunAll(){
 	manager.StartUDPListeners()
 	manager.StartGrpcServer()
 	manager.StartBroadcaster()
+	go manager.Run()
 }
 func (manager *ServiceManager) StopAll(){
 	manager.StopLogger()
