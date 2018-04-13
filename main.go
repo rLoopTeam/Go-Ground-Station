@@ -35,5 +35,6 @@ func main() {
 	}else{
 		serviceManager.SetGrpcServer(grpcServer,conn)
 	}
+	serviceManager.RunAll()
 	select {}
 }
