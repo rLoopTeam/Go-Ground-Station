@@ -2,13 +2,6 @@ package gstypes
 
 import (
 	"go/types"
-	"rloop/Go-Ground-Station/gsgrpc"
-	"rloop/Go-Ground-Station/datastore"
-	"rloop/Go-Ground-Station/server"
-	"rloop/Go-Ground-Station/logging"
-	"google.golang.org/grpc"
-	"net"
-	"rloop/Go-Ground-Station/proto"
 )
 
 type Node struct {
@@ -113,18 +106,6 @@ type GSArrayGeneric struct {
 	Count int
 	Capacity int
 	Data []interface{}
-}
-
-type ServiceManager struct{
-	serviceChan <- chan *proto.ServerControl
-	isRunning bool
-	doRun bool
-	dataStoreManager *datastore.DataStoreManager
-	gRPCServer *grpc.Server
-	udpListenerServers []*server.UDPListenerServer
-	udpBroadcaster *server.UDPBroadcasterServer
-	gsLogger *logging.Gslogger
-	grpcConn net.Listener
 }
 
 type GSArrayDSE struct{

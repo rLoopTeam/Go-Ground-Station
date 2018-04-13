@@ -6,15 +6,17 @@ import (
 	"rloop/Go-Ground-Station/gstypes"
 	"rloop/Go-Ground-Station/server"
 	"rloop/Go-Ground-Station/logging"
+	"fmt"
 )
 
 func main() {
+	fmt.Println("Backend version 13-04-2018")
 	gsLogger, loggerChannel := logging.New()
 	//the channel that will be used to transfer data between the parser and the datastoremanager
 	packetStoreChannel := make(chan gstypes.PacketStoreElement,512)
 	commandChannel := make(chan gstypes.Command,32)
 
-	serviceManager, serviceChan := gstypes.NewServiceManager()
+	serviceManager, serviceChan := server.NewServiceManager()
 	//struct that will contain the channels that will be used to communicate between the datastoremanager and stream server
 	grpcChannelsHolder := gsgrpc.GetChannelsHolder()
 	//Create the datastoremanager server
