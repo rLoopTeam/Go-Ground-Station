@@ -6,9 +6,15 @@ import (
 	"rloop/Go-Ground-Station/server"
 	"rloop/Go-Ground-Station/logging"
 	"fmt"
+	_ "net/http/pprof"
+	"log"
+	"net/http"
 )
 
 func main() {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:8080", nil))
+	}()
 	fmt.Println("Backend version 13-04-2018")
 	gsLogger, loggerChannel := logging.New()
 

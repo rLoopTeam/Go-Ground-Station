@@ -17,7 +17,7 @@ import (
 type GRPCServer struct {
 	serviceChan chan <- *proto.ServerControl
 	commandChannel chan <- gstypes.Command
-	receiversChannelHolder ChannelsHolder
+	receiversChannelHolder *ChannelsHolder
 }
 
 func (srv *GRPCServer) Ping(context.Context, *proto.Ping) (*proto.Pong, error) {
@@ -130,7 +130,7 @@ func (srv *GRPCServer) removeChannelFromDatastoreQueue(receiverChannel chan gsty
 	srv.receiversChannelHolder.Coordinator.Done <- true
 }
 
-func newGroundStationGrpcServer (grpcChannelsHolder ChannelsHolder,commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl) *GRPCServer{
+func newGroundStationGrpcServer (grpcChannelsHolder *ChannelsHolder,commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl) *GRPCServer{
 	server := &GRPCServer{
 		receiversChannelHolder:grpcChannelsHolder,
 		commandChannel:commandChannel,
@@ -138,7 +138,7 @@ func newGroundStationGrpcServer (grpcChannelsHolder ChannelsHolder,commandChanne
 	return server
 }
 
-func NewGoGrpcServer (grpcChannelsHolder ChannelsHolder, commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl) (net.Listener, *grpc.Server, error){
+func NewGoGrpcServer (grpcChannelsHolder *ChannelsHolder, commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl) (net.Listener, *grpc.Server, error){
 	GSserver := newGroundStationGrpcServer(grpcChannelsHolder, commandChannel, serviceChan)
 	var err error
 	var grpcServer *grpc.Server
@@ -156,7 +156,7 @@ func NewGoGrpcServer (grpcChannelsHolder ChannelsHolder, commandChannel chan <- 
 	return conn,grpcServer,err
 }
 
-func GetChannelsHolder () ChannelsHolder {
+func GetChannelsHolder () *ChannelsHolder {
 	callChannel := make (chan bool)
 	ackChannel := make (chan bool)
 	doneChannel := make (chan bool)
@@ -165,7 +165,7 @@ func GetChannelsHolder () ChannelsHolder {
 		Ack:ackChannel,
 		Done:doneChannel}
 
-	holder := ChannelsHolder{
+	holder := &ChannelsHolder{
 		Coordinator:coordinator,
 		ReceiverMutex: sync.Mutex{},
 		Receivers: make(map[*chan gstypes.RealTimeDataBundle]*chan gstypes.RealTimeDataBundle),

@@ -14,7 +14,7 @@ type DataStoreManager struct {
 	isRunning bool
 	doRun bool
 	packetChannel <-chan gstypes.PacketStoreElement
-	receiversChannelHolder gsgrpc.ChannelsHolder
+	receiversChannelHolder *gsgrpc.ChannelsHolder
 	ticker *time.Ticker
 	packetStoreCount int64
 
@@ -132,7 +132,7 @@ func (manager *DataStoreManager) checker (){
 		//used to calculate the time difference and to set the new time
 		//of when the parameters were updated last, only for parameters that will be zeroed
 		currentTime := t.Unix()
-		fmt.Println("checking...\n")
+		fmt.Println("checking...")
 		for _, rtStreamElement := range manager.rtData{
 			recordedTime := rtStreamElement.Data.RxTime
 			if (currentTime - recordedTime) > 4{
@@ -193,7 +193,7 @@ func cleanJoin(prefix string, name string) string{
 	return fullyFormattedName
 }
 
-func New (channelsHolder gsgrpc.ChannelsHolder) (*DataStoreManager, chan<- gstypes.PacketStoreElement){
+func New (channelsHolder *gsgrpc.ChannelsHolder) (*DataStoreManager, chan<- gstypes.PacketStoreElement){
 	//the channel that will be used to transfer data between the parser and the datastoremanager
 	packetStoreChannel := make(chan gstypes.PacketStoreElement,512)
 	storeManager := &DataStoreManager{

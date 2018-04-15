@@ -6,6 +6,12 @@ This part of the groundstation is the side that communicates directly with the r
 
 The groundstation uses the gRPC protocol to communicate with whatever type of frontend we'd choose to use.
 
+# Set up
+
+Before pulling the repo make sure you understand [how Go development works](https://golang.org/doc/code.html#Organization)
+
+The project is structured as follows: $GOPATH/src/rloop/<repo>
+
 # Dependencies
 
 ###### gRPC
