@@ -27,7 +27,7 @@ type UDPListenerServer struct {
 	doRun bool
 	conn      *net.UDPConn
 	serverPort int
-	ch chan<- gstypes.PacketStoreElement
+	packetStoreChannel chan<- gstypes.PacketStoreElement
 	loggerChan chan<-gstypes.PacketStoreElement
 }
 
@@ -70,10 +70,28 @@ func (srv *UDPListenerServer) listen() {
 			return
 		}
 		if n > 0 {
-			parsing.ParsePacket(srv.serverPort, buffer[:n], srv.ch,srv.loggerChan, &errCount)
+			srv.ProcessMessage(srv.serverPort, buffer[:n], &errCount)
 		}
 	}
 	srv.isRunning = false
+}
+
+func (srv *UDPListenerServer) ProcessMessage(nodePort int, packet []byte, errcount *int){
+	defer func() {
+		if r := recover(); r != nil {
+			*errcount++
+			fmt.Println("Problem with parsing packet in: ", r)
+			fmt.Printf("errcount on nodeport %d: %d\n", nodePort,*errcount)
+		}
+	}()
+
+	element, err := parsing.ParsePacket(nodePort,packet,errcount)
+	if err == nil {
+		srv.packetStoreChannel <- element
+		srv.loggerChan<- element
+	}else{
+		fmt.Println(err)
+	}
 }
 
 func (srv *UDPBroadcasterServer) Run (){
@@ -159,7 +177,7 @@ func CreateNewUDPServers (channel chan<- gstypes.PacketStoreElement, loggerChann
 		srv := &UDPListenerServer{
 			isRunning: false,
 			doRun: false,
-			ch: channel,
+			packetStoreChannel: channel,
 			loggerChan:loggerChannel}
 		err := srv.open(nodesPorts[idx])
 		if err == nil {

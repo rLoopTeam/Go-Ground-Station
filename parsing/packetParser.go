@@ -3,21 +3,13 @@ package parsing
 import (
 	"rloop/Go-Ground-Station/constants"
 	"rloop/Go-Ground-Station/gstypes"
-	"encoding/binary"
 	"rloop/Go-Ground-Station/helpers"
-	"fmt"
+	"encoding/binary"
 	"time"
 	"errors"
 )
 
-func ParsePacket(nodePort int, packet []byte, packetStoreChannel chan <- gstypes.PacketStoreElement, loggerChannel chan <- gstypes.PacketStoreElement, errcount *int) {
-	defer func() {
-		if r := recover(); r != nil {
-			*errcount++
-			fmt.Println("Problem with parsing packet in: ", r)
-			fmt.Printf("errcount on nodeport %d: %d\n", nodePort,*errcount)
-		}
-	}()
+func ParsePacket(nodePort int, packet []byte, errcount *int) (gstypes.PacketStoreElement,error) {
 	packetLength := len(packet)
 	//get the index of the last byte of the payload
 	lastPayloadByteIndex := packetLength - 2
@@ -36,12 +28,11 @@ func ParsePacket(nodePort int, packet []byte, packetStoreChannel chan <- gstypes
 	definition := constants.PacketDefinitions[packetType]
 	//make crc check and if correct proceed to parsing
 	//TODO: fix crc
-	packetStoreElement, err := parsePayload(definition, payloadLengthInt,nodePort, payload)
+	packetStoreElement, err := ParsePayload(definition, payloadLengthInt,nodePort, payload)
 	if err == nil {
-		packetStoreChannel <- packetStoreElement
-		loggerChannel<- packetStoreElement
+		return packetStoreElement,nil
 	}else{
-		fmt.Println(err)
+		return gstypes.PacketStoreElement{}, err
 	}
 	//testCrc,_ := helpers.isCrcCheck(payloadLengthInt,payload,packet[lastPayloadByteIndex:])
 	//fmt.Printf("CRC check: %t\n", testCrc)
@@ -54,7 +45,7 @@ func ParsePacket(nodePort int, packet []byte, packetStoreChannel chan <- gstypes
 	*/
 }
 
-func parsePayload(definition gstypes.PacketDefinition, payloadLength int, port int,payload []byte) (gstypes.PacketStoreElement, error) {
+func ParsePayload(definition gstypes.PacketDefinition, payloadLength int, port int,payload []byte) (gstypes.PacketStoreElement, error) {
 	packetStoreElement := gstypes.PacketStoreElement{}
 	var parseError error = nil
 	//Declare variable that will be forwarded to the consumers
@@ -79,7 +70,6 @@ func parsePayload(definition gstypes.PacketDefinition, payloadLength int, port i
 	packetStoreElement.PacketName = nodeMetaData.Name
 	packetStoreElement.ParameterPrefix = nodeMetaData.ParameterPrefix
 	packetStoreElement.RxTime = time.Now().Unix()
-
 
 	TestArr := gstypes.NewGSarrayDSE()
 
