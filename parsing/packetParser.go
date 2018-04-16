@@ -48,6 +48,7 @@ func ParsePayload(definition gstypes.PacketDefinition, payloadLength int, port i
 	var currentParameter gstypes.Param
 	//need the nodenames to distinguish the hosts with similar functions
 	nodeName := constants.Hosts[port].Name
+	//Retrieve the metadata for the particular host, in some cases the same packet types are used by different hosts
 	nodeMetaData := definition.MetaData[nodeName]
 	//retrieve all the parameters (array of parameter objects)
 	parameters := definition.Parameters

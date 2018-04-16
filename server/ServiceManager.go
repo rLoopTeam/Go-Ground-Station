@@ -9,41 +9,40 @@ import (
 	"fmt"
 )
 
-
-type ServiceManager struct{
-	serviceChan <- chan *proto.ServerControl
-	isRunning bool
-	doRun bool
-	dataStoreManager *datastore.DataStoreManager
-	gRPCServer *grpc.Server
+type ServiceManager struct {
+	serviceChan        <-chan *proto.ServerControl
+	isRunning          bool
+	doRun              bool
+	dataStoreManager   *datastore.DataStoreManager
+	gRPCServer         *grpc.Server
 	udpListenerServers []*UDPListenerServer
-	udpBroadcaster *UDPBroadcasterServer
-	gsLogger *logging.Gslogger
-	grpcConn net.Listener
+	udpBroadcaster     *UDPBroadcasterServer
+	gsLogger           *logging.Gslogger
+	grpcConn           net.Listener
 }
 
-func (manager *ServiceManager) SetGsLogger (logger *logging.Gslogger){
+func (manager *ServiceManager) SetGsLogger(logger *logging.Gslogger) {
 	manager.gsLogger = logger
 }
 
-func (manager *ServiceManager) SetGrpcServer (grpcServer *grpc.Server,conn net.Listener){
+func (manager *ServiceManager) SetGrpcServer(grpcServer *grpc.Server, conn net.Listener) {
 	manager.gRPCServer = grpcServer
 	manager.grpcConn = conn
 }
 
-func (manager *ServiceManager) SetDatastoreManager (datastoreManager *datastore.DataStoreManager){
+func (manager *ServiceManager) SetDatastoreManager(datastoreManager *datastore.DataStoreManager) {
 	manager.dataStoreManager = datastoreManager
 }
 
-func (manager *ServiceManager) SetUDPListenerServers (udpListeners []*UDPListenerServer){
+func (manager *ServiceManager) SetUDPListenerServers(udpListeners []*UDPListenerServer) {
 	manager.udpListenerServers = udpListeners
 }
 
-func (manager *ServiceManager) SetUDPBroadcaster (broadcaster *UDPBroadcasterServer){
+func (manager *ServiceManager) SetUDPBroadcaster(broadcaster *UDPBroadcasterServer) {
 	manager.udpBroadcaster = broadcaster
 }
 
-func (manager *ServiceManager) RunAll(){
+func (manager *ServiceManager) RunAll() {
 	manager.StartLogger()
 	manager.StartDatastoreManager()
 	manager.StartUDPListeners()
@@ -51,7 +50,7 @@ func (manager *ServiceManager) RunAll(){
 	manager.StartBroadcaster()
 	go manager.Run()
 }
-func (manager *ServiceManager) StopAll(){
+func (manager *ServiceManager) StopAll() {
 	manager.StopLogger()
 	manager.StopDatastoreManager()
 	manager.StopUDPListeners()
@@ -59,63 +58,65 @@ func (manager *ServiceManager) StopAll(){
 	manager.StopBroadcaster()
 }
 
-func (manager *ServiceManager) StartUDPListeners(){
-	for _,srv := range manager.udpListenerServers{
+func (manager *ServiceManager) StartUDPListeners() {
+	for _, srv := range manager.udpListenerServers {
 		go srv.Run()
 	}
 }
-func (manager *ServiceManager) StopUDPListeners(){}
+func (manager *ServiceManager) StopUDPListeners() {}
 
-func (manager *ServiceManager) StartDatastoreManager(){
-	manager.dataStoreManager.Start()
-}
-func (manager *ServiceManager) StopDatastoreManager(){
-	manager.dataStoreManager.Stop()
-}
+func (manager *ServiceManager) StartDatastoreManager() { manager.dataStoreManager.Start() }
+func (manager *ServiceManager) StopDatastoreManager() {	manager.dataStoreManager.Stop() }
 
-func (manager *ServiceManager) StartBroadcaster(){
-	go manager.udpBroadcaster.Run()
-}
-func (manager *ServiceManager) StopBroadcaster(){
-	manager.udpBroadcaster.Stop()
-}
+func (manager *ServiceManager) StartBroadcaster() {	go manager.udpBroadcaster.Run() }
+func (manager *ServiceManager) StopBroadcaster() { manager.udpBroadcaster.Stop() }
 
-func (manager *ServiceManager) StartGrpcServer(){
+func (manager *ServiceManager) StartGrpcServer() {
 	if manager.gRPCServer != nil {
 		manager.gRPCServer.Serve(manager.grpcConn)
-	}else {
+	} else {
 		fmt.Println("cannot start grpc service, server is not set")
 	}
 }
-func (manager *ServiceManager) StopGrpcServer(){}
+func (manager *ServiceManager) StopGrpcServer() {}
 
-func (manager *ServiceManager) StartLogger(){
-	go manager.gsLogger.Start()
+func (manager *ServiceManager) StartLogger() {
+	if !manager.gsLogger.IsRunning {
+		go manager.gsLogger.Start()
+	}
 }
-func (manager *ServiceManager) StopLogger(){}
+func (manager *ServiceManager) StopLogger() { manager.gsLogger.Stop() }
 
-func (manager *ServiceManager) Run(){
+func (manager *ServiceManager) Run() {
 	manager.doRun = true
 	for {
-		if(!manager.doRun){break}
-		control := <- manager.serviceChan
+		if (!manager.doRun) {
+			break
+		}
+		control := <-manager.serviceChan
 		manager.executeControl(control)
 	}
 }
 
-func (manager *ServiceManager) executeControl(control *proto.ServerControl){
+func (manager *ServiceManager) executeControl(control *proto.ServerControl) {
 	switch control.Command {
-	case 0: manager.StartLogger()
+	case proto.ServerControl_LogServiceStart:
+		manager.StartLogger()
 		break
-	case 1: manager.StopLogger()
+	case proto.ServerControl_LogServiceStop:
+		manager.StopLogger()
 		break
-	case 2: manager.StartDatastoreManager()
+	case proto.ServerControl_DataStoreManagerStart:
+		manager.StartDatastoreManager()
 		break
-	case 3: manager.StopDatastoreManager()
+	case proto.ServerControl_DataStoreManagerStop:
+		manager.StopDatastoreManager()
 		break
-	case 4: manager.StartBroadcaster()
+	case proto.ServerControl_BroadcasterStart:
+		manager.StartBroadcaster()
 		break
-	case 5: manager.StopBroadcaster()
+	case proto.ServerControl_BroadcasterStop:
+		manager.StopBroadcaster()
 		break
 	}
 }
@@ -124,11 +125,11 @@ func (manager *ServiceManager) Stop() {
 	manager.doRun = false
 }
 
-func NewServiceManager() (*ServiceManager, chan <- *proto.ServerControl) {
-	srvcChan := make(chan *proto.ServerControl,8)
+func NewServiceManager() (*ServiceManager, chan<- *proto.ServerControl) {
+	srvcChan := make(chan *proto.ServerControl, 8)
 	serviceManager := &ServiceManager{
 		serviceChan: srvcChan,
-		isRunning:false,
-		doRun: false}
-	return serviceManager,srvcChan
+		isRunning:   false,
+		doRun:       false}
+	return serviceManager, srvcChan
 }

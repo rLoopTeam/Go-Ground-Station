@@ -13,12 +13,16 @@ import (
 type Gslogger struct {
 	DataChan <- chan gstypes.PacketStoreElement
 	doRun bool
-	isRunning bool
+	IsRunning bool
 }
 
 func (gslogger *Gslogger) Start(){
 	gslogger.doRun = true
 	gslogger.run()
+}
+
+func (gslogger *Gslogger) Stop(){
+	gslogger.doRun = false
 }
 
 func (gslogger *Gslogger) run (){
@@ -40,7 +44,7 @@ func (gslogger *Gslogger) run (){
 
 	writer := csv.NewWriter(file)
 	writer.Write(headers)
-
+	gslogger.IsRunning = true
 	for data := range gslogger.DataChan {
 		if(!gslogger.doRun){break}
 
@@ -59,7 +63,7 @@ func (gslogger *Gslogger) run (){
 			writer.Flush()
 		}
 	}
-	gslogger.isRunning = false
+	gslogger.IsRunning = false
 }
 
 func New() (*Gslogger, chan <- gstypes.PacketStoreElement){
@@ -67,6 +71,6 @@ func New() (*Gslogger, chan <- gstypes.PacketStoreElement){
 	gslogger := &Gslogger{
 		DataChan:dataChan,
 		doRun:false,
-		isRunning:false}
+		IsRunning:false}
 	return gslogger,dataChan
 }
