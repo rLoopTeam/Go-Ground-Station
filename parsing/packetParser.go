@@ -28,12 +28,7 @@ func ParsePacket(nodePort int, packet []byte, errcount *int) (gstypes.PacketStor
 	definition := constants.PacketDefinitions[packetType]
 	//make crc check and if correct proceed to parsing
 	//TODO: fix crc
-	packetStoreElement, err := ParsePayload(definition, payloadLengthInt,nodePort, payload)
-	if err == nil {
-		return packetStoreElement,nil
-	}else{
-		return gstypes.PacketStoreElement{}, err
-	}
+	return ParsePayload(definition, payloadLengthInt,nodePort, payload)
 	//testCrc,_ := helpers.isCrcCheck(payloadLengthInt,payload,packet[lastPayloadByteIndex:])
 	//fmt.Printf("CRC check: %t\n", testCrc)
 	/*
