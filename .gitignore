@@ -56,3 +56,4 @@ main.exe
 todo.txt
 proto/proto compile cmd.txt
 *.csv
+vet_results.txt

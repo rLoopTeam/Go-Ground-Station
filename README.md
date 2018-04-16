@@ -14,7 +14,7 @@ The project is structured as follows: $GOPATH/src/rloop/<repo>
 
 # Dependencies
 
-###### gRPC
+#### gRPC
 
 According to the [gRPC website](https://grpc.io/docs/quickstart/go.html):
 
@@ -33,3 +33,9 @@ While developing you can simply run the app with the next command: ```$ go run m
 # Compile
 
 # Available Scripts
+
+###### vet_all
+Vet examines Go source code and reports suspicious constructs, [...] it can find errors not caught by the compilers.
+
+###### build
+The build script is useful as it will compile the go code for the 3 main platforms (Windows,Mac and Linux)
