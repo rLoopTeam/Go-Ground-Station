@@ -6,7 +6,7 @@ import (
 	"go/types"
 )
 
-func isCrc16Check(payloadlength int, payload []byte, payloadCrc []byte) (bool,error){
+func IsCrc16Check(payloadlength int, payload []byte, payloadCrc []byte) (bool,error){
 
 	result := false
 	var err error = nil
