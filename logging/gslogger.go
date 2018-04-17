@@ -11,6 +11,7 @@ import (
 )
 
 type Gslogger struct {
+	ticker *time.Ticker
 	DataChan <- chan gstypes.PacketStoreElement
 	doRun bool
 	IsRunning bool
@@ -60,7 +61,10 @@ func (gslogger *Gslogger) run (){
 			if err != nil {
 				log.Fatal("Error Writing log file:", err)
 			}
-			writer.Flush()
+		}
+		select {
+		case <- gslogger.ticker.C: writer.Flush()
+		default:
 		}
 	}
 	gslogger.IsRunning = false
@@ -71,6 +75,7 @@ func New() (*Gslogger, chan <- gstypes.PacketStoreElement){
 	gslogger := &Gslogger{
 		DataChan:dataChan,
 		doRun:false,
-		IsRunning:false}
+		IsRunning:false,
+		ticker:time.NewTicker(10 * time.Second)}
 	return gslogger,dataChan
 }

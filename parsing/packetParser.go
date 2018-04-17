@@ -10,6 +10,8 @@ import (
 )
 
 func ParsePacket(nodePort int, packet []byte, errcount *int) (gstypes.PacketStoreElement,error) {
+	//var packetStoreElement gstypes.PacketStoreElement
+	//var err error
 	packetLength := len(packet)
 	//get the index of the last byte of the payload
 	lastPayloadByteIndex := packetLength - 2
@@ -28,16 +30,15 @@ func ParsePacket(nodePort int, packet []byte, errcount *int) (gstypes.PacketStor
 	definition := constants.PacketDefinitions[packetType]
 	//make crc check and if correct proceed to parsing
 	//TODO: fix crc
-	return ParsePayload(definition, payloadLengthInt,nodePort, payload)
-	//testCrc,_ := helpers.isCrcCheck(payloadLengthInt,payload,packet[lastPayloadByteIndex:])
-	//fmt.Printf("CRC check: %t\n", testCrc)
 	/*
-	if result, err := helpers.isCrcCheck(payloadLengthInt,payload,packet[lastPayloadByteIndex:]); result{
-		parsePayload(definition, payloadLengthInt, payload)
-	}else if err != nil{
-		//log the error or faulty crc
+	crcCheck, err := helpers.IsCrc16Check(payloadLengthInt,payload,packet[lastPayloadByteIndex:])
+	if crcCheck {
+		packetStoreElement, err = ParsePayload(definition, payloadLengthInt, nodePort, payload)
+	}else if err == nil{
+		err = errors.New("CRC check failed")
 	}
 	*/
+	return ParsePayload(definition, payloadLengthInt, nodePort, payload)
 }
 
 func ParsePayload(definition gstypes.PacketDefinition, payloadLength int, port int,payload []byte) (gstypes.PacketStoreElement, error) {
