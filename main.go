@@ -57,7 +57,7 @@ func main() {
 	//Create the UDPListenerServers that will listen to the packets sent by the rpod
 	udpListenerServers := server.CreateNewUDPListenerServers(dataStoreChannel,loggerChannel,nodesPorts)
 	//Create the gsgrpc stream server
-	conn, grpcServer, err := gsgrpc.NewGoGrpcServer(grpcChannelsHolder,commandChannel,serviceChannel)
+	conn, grpcServer, err := gsgrpc.NewGoGrpcServer(grpcChannelsHolder,commandChannel,serviceChannel, serviceManager)
 
 	serviceManager.SetDatastoreManager(dataStoreManager)
 	serviceManager.SetGsLogger(gsLogger)

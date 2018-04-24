@@ -34,8 +34,21 @@ message Command {
 
 message Ack {}
 
-message Pong {
+message ServerStatus {
+    bool DataStoreManagerRunning = 1;
+	bool GRPCServerRunning = 2;
+	bool BroadcasterRunning = 3;
+	bool GSLoggerRunning = 4;
+    repeated OpenPort OpenPorts = 5;
+}
 
+message OpenPort {
+    int32 Port = 1;
+    bool Serving = 2;
+}
+
+message Pong {
+    ServerStatus Status = 1;
 }
 
 message Ping {}
