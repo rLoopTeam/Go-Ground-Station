@@ -23,16 +23,16 @@ type UDPBroadcasterServer struct {
 }
 
 type UDPListenerServer struct {
-	isRunning bool
+	IsRunning bool
 	doRun bool
 	conn      *net.UDPConn
-	serverPort int
+	ServerPort int
 	packetStoreChannel chan<- gstypes.PacketStoreElement
 	loggerChan chan<-gstypes.PacketStoreElement
 }
 
 func (srv *UDPListenerServer) open(port int) error {
-	srv.serverPort = port
+	srv.ServerPort = port
 	s := []string{":", strconv.Itoa(port)}
 
 	udpPort := strings.Join(s, "")
@@ -48,7 +48,7 @@ func (srv *UDPListenerServer) open(port int) error {
 
 func (srv *UDPListenerServer) Run(){
 	srv.doRun = true
-	if !srv.isRunning {
+	if !srv.IsRunning {
 		srv.listen()
 	}
 }
@@ -60,20 +60,20 @@ func (srv *UDPListenerServer) Stop (){
 func (srv *UDPListenerServer) listen() {
 	buffer := make([]byte, 1024)
 	errCount := 0
-	srv.isRunning = true
+	srv.IsRunning = true
 	for {
 		if !srv.doRun {break}
 		n, _, err := srv.conn.ReadFromUDP(buffer[0:])
 
 		if err != nil {
-			fmt.Printf("Packet error on port: %d\n", srv.serverPort)
+			fmt.Printf("Packet error on port: %d\n", srv.ServerPort)
 			return
 		}
 		if n > 0 {
-			srv.ProcessMessage(srv.serverPort, buffer[:n], &errCount)
+			srv.ProcessMessage(srv.ServerPort, buffer[:n], &errCount)
 		}
 	}
-	srv.isRunning = false
+	srv.IsRunning = false
 }
 
 func (srv *UDPListenerServer) ProcessMessage(nodePort int, packet []byte, errcount *int){

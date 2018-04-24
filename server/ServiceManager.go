@@ -7,6 +7,8 @@ import (
 	"google.golang.org/grpc"
 	"net"
 	"fmt"
+	"sync"
+	"time"
 )
 
 type ServiceManager struct {
@@ -19,6 +21,15 @@ type ServiceManager struct {
 	udpBroadcaster     *UDPBroadcasterServer
 	gsLogger           *logging.Gslogger
 	grpcConn           net.Listener
+	serviceCheckTicker *time.Ticker
+	StatusMutex sync.RWMutex
+	Status ServiceStatus
+}
+
+func (manager *ServiceManager) GetStatus() ServiceStatus{
+	manager.StatusMutex.RLock()
+	defer manager.StatusMutex.RUnlock()
+	return manager.Status
 }
 
 func (manager *ServiceManager) SetGsLogger(logger *logging.Gslogger) {
@@ -89,6 +100,20 @@ func (manager *ServiceManager) StopLogger() { manager.gsLogger.Stop() }
 
 func (manager *ServiceManager) Run() {
 	manager.doRun = true
+	go func() {
+		for _ = range manager.serviceCheckTicker.C {
+			manager.StatusMutex.Lock()
+			manager.Status.BroadcasterRunning = manager.udpBroadcaster.isRunning
+			manager.Status.DataStoreManagerRunning = manager.dataStoreManager.IsRunning
+			//manager.Status.GRPCServerRunning = manager.gRPCServer.IsRunning
+			manager.Status.GSLoggerRunning = manager.gsLogger.IsRunning
+			for _, srv := range manager.udpListenerServers {
+				manager.Status.PortsListening[srv.ServerPort] = srv.IsRunning
+			}
+			manager.StatusMutex.Unlock()
+		}
+	}()
+
 	for {
 		if (!manager.doRun) {
 			break
@@ -130,6 +155,37 @@ func NewServiceManager() (*ServiceManager, chan<- *proto.ServerControl) {
 	serviceManager := &ServiceManager{
 		serviceChan: srvcChan,
 		isRunning:   false,
-		doRun:       false}
+		doRun:       false,
+		serviceCheckTicker: time.NewTicker(time.Second*5),
+		StatusMutex: sync.RWMutex{},
+		Status:NewServiceStatus()}
+
 	return serviceManager, srvcChan
+}
+
+type ServiceStatus struct {
+	DataStoreMutex sync.RWMutex
+	DataStoreManagerRunning bool
+
+	GRPCMutex sync.RWMutex
+	GRPCServerRunning bool
+
+	BroadcasterMutex sync.RWMutex
+	BroadcasterRunning bool
+
+	GSLoggerMutex sync.RWMutex
+	GSLoggerRunning bool
+
+	PortsListeningMutex sync.RWMutex
+	PortsListening map[int]bool
+}
+
+func NewServiceStatus() ServiceStatus {
+	serviceStatus := ServiceStatus{
+		DataStoreManagerRunning: false,
+		GRPCServerRunning:true,
+		BroadcasterRunning:false,
+		GSLoggerRunning:false,
+		PortsListening: map[int]bool{}}
+	return serviceStatus
 }
