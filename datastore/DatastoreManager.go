@@ -195,7 +195,7 @@ func cleanJoin(prefix string, name string) string{
 
 func New (channelsHolder *gsgrpc.ChannelsHolder) (*DataStoreManager, chan<- gstypes.PacketStoreElement){
 	//the channel that will be used to transfer data between the parser and the datastoremanager
-	packetStoreChannel := make(chan gstypes.PacketStoreElement,512)
+	packetStoreChannel := make(chan gstypes.PacketStoreElement,128)
 	storeManager := &DataStoreManager{
 		packetStoreCount:0,
 		receiversChannelHolder: channelsHolder,

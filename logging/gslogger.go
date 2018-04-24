@@ -71,7 +71,7 @@ func (gslogger *Gslogger) run (){
 }
 
 func New() (*Gslogger, chan <- gstypes.PacketStoreElement){
-	dataChan := make(chan gstypes.PacketStoreElement, 256)
+	dataChan := make(chan gstypes.PacketStoreElement, 512)
 	gslogger := &Gslogger{
 		DataChan:dataChan,
 		doRun:false,

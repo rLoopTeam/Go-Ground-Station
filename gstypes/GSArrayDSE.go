@@ -1,5 +1,9 @@
 package gstypes
 
+type GSArrayDSE struct{
+	array GSArrayGeneric
+}
+
 func (arr *GSArrayDSE) Push (element DataStoreElement)  {
 	arr.array.Push(element)
 }

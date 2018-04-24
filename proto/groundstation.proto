@@ -34,7 +34,9 @@ message Command {
 
 message Ack {}
 
-message Pong {}
+message Pong {
+
+}
 
 message Ping {}
 

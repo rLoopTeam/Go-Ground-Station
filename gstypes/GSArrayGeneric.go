@@ -1,5 +1,11 @@
 package gstypes
 
+type GSArrayGeneric struct {
+	Count int
+	Capacity int
+	Data []interface{}
+}
+
 func (arr *GSArrayGeneric) Push (element interface{})  {
 	if arr.Count >= arr.Capacity {
 		newArr := make([]interface{},arr.Capacity*2)

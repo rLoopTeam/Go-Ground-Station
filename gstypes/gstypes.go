@@ -101,13 +101,3 @@ type ReceiversCoordination struct {
 	Ack chan bool
 	Done chan bool
 }
-
-type GSArrayGeneric struct {
-	Count int
-	Capacity int
-	Data []interface{}
-}
-
-type GSArrayDSE struct{
-	array GSArrayGeneric
-}

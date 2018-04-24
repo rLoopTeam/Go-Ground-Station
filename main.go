@@ -9,6 +9,9 @@ import (
 	_ "net/http/pprof"
 	"log"
 	"net/http"
+	"flag"
+	"rloop/Go-Ground-Station/constants"
+	"strconv"
 )
 
 func main() {
@@ -16,8 +19,33 @@ func main() {
 		log.Println(http.ListenAndServe("localhost:8080", nil))
 	}()
 	fmt.Println("Backend version 13-04-2018")
-	gsLogger, loggerChannel := logging.New()
 
+	//PARSE FLAGS AND DETERMINE WHICH PORTS THE SERVER WILL LISTEN TO
+	//the array that will hold the port numbers for the UDP listeners
+	flag.Parse()
+	var nodesPorts []int
+	flags := flag.Args()
+	flagLength := len(flags)
+	if flagLength > 0 {
+		nodesPorts = make([]int, flagLength)
+		for i, p := range flags {
+			port, err := strconv.Atoi(p)
+			if err == nil{
+				nodesPorts[i] = port
+			}
+		}
+	}else{
+		//calculate the amount of ports that we'll have to listen to
+		amountNodes := len(constants.Hosts)
+		nodesPorts = make([]int, amountNodes)
+		mapIndex := 0
+		for k := range constants.Hosts {
+			nodesPorts[mapIndex] = k
+			mapIndex++
+		}
+	}
+
+	gsLogger, loggerChannel := logging.New()
 	//struct that will contain the channels that will be used to communicate between the datastoremanager and stream server
 	grpcChannelsHolder := gsgrpc.GetChannelsHolder()
 	//create a servicemanager and get the channel where control commands will be issued
@@ -27,7 +55,7 @@ func main() {
 	//create the broadcasting server that will send the commands to the rpod
 	udpBroadCasterServer, commandChannel := server.CreateNewUDPCommandServer()
 	//Create the UDPListenerServers that will listen to the packets sent by the rpod
-	udpListenerServers := server.CreateNewUDPServers(dataStoreChannel,loggerChannel)
+	udpListenerServers := server.CreateNewUDPListenerServers(dataStoreChannel,loggerChannel,nodesPorts)
 	//Create the gsgrpc stream server
 	conn, grpcServer, err := gsgrpc.NewGoGrpcServer(grpcChannelsHolder,commandChannel,serviceChannel)
 
