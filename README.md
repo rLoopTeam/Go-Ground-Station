@@ -28,7 +28,9 @@ According to the [gRPC website](https://grpc.io/docs/quickstart/go.html):
 
 # Running Locally
 
-While developing you can simply run the app with the next command: ```$ go run main.go```
+While developing you can simply run the app with the next command: ```$ go run main.go [<ports>]```. If no ports are defined, default ports defined in the constants package are used.
+
+# Profiling
 
 # Compile
 
@@ -37,5 +39,5 @@ While developing you can simply run the app with the next command: ```$ go run m
 ###### vet_all
 Vet examines Go source code and reports suspicious constructs, [...] it can find errors not caught by the compilers.
 
-###### build
+###### build_all
 The build script is useful as it will compile the go code for the 3 main platforms (Windows,Mac and Linux)

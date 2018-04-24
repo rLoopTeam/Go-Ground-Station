@@ -159,19 +159,12 @@ func serialize(cmd gstypes.Command) ([]byte, error){
 	return bytes, err
 }
 
-func CreateNewUDPServers (channel chan<- gstypes.PacketStoreElement, loggerChannel chan <- gstypes.PacketStoreElement) []*UDPListenerServer{
-	//calculate the amount of ports that we'll have to listen to
-	amountNodes := len(constants.Hosts)
-	//create an array that will hold the port numbers
-	nodesPorts := make([]int, amountNodes)
+func CreateNewUDPListenerServers (channel chan<- gstypes.PacketStoreElement, loggerChannel chan <- gstypes.PacketStoreElement, nodesPorts []int) []*UDPListenerServer{
+	amountNodes := len(nodesPorts)
 	//create an array that will keep the servers
 	serversArray := make([]*UDPListenerServer,amountNodes)
 	//populate the nodeports array with the port numbers
-	mapIndex := 0
-	for k := range constants.Hosts {
-		nodesPorts[mapIndex] = k
-		mapIndex++
-	}
+
 	//create and open all the servers
 	for idx:= 0; idx < amountNodes; idx++ {
 		srv := &UDPListenerServer{
