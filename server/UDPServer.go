@@ -168,7 +168,7 @@ func CreateNewUDPListenerServers (channel chan<- gstypes.PacketStoreElement, log
 	//create and open all the servers
 	for idx:= 0; idx < amountNodes; idx++ {
 		srv := &UDPListenerServer{
-			isRunning: false,
+			IsRunning: false,
 			doRun: false,
 			packetStoreChannel: channel,
 			loggerChan:loggerChannel}

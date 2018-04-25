@@ -12,7 +12,6 @@ import (
 	"golang.org/x/net/context"
 	"bytes"
 	"encoding/binary"
-	"rloop/Go-Ground-Station/server"
 )
 
 type GRPCServer struct {
@@ -199,5 +198,5 @@ func NewGoGrpcServer (grpcChannelsHolder *ChannelsHolder, commandChannel chan <-
 }
 
 type StatusProvider interface {
-	GetStatus() server.ServiceStatus
+	GetStatus() gstypes.ServiceStatus
 }

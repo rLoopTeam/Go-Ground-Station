@@ -29,12 +29,12 @@ func (manager *DataStoreManager) Start (){
 		go manager.run()
 		fmt.Println("go run checker")
 		go manager.checker()
-		manager.IsRunning = true;
+		manager.IsRunning = true
 	}
 }
 
 func (manager *DataStoreManager) Stop(){
-	manager.doRun = false;
+	manager.doRun = false
 }
 
 func (manager *DataStoreManager) run (){
@@ -45,6 +45,7 @@ func (manager *DataStoreManager) run (){
 		//this call is necessary so that the goroutine doesn't use too many cpu time at once
 		runtime.Gosched()
 	}
+	fmt.Println("manager isrunning = false")
 	manager.IsRunning = false
 }
 
