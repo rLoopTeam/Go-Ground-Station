@@ -147,7 +147,6 @@ func (srv *GRPCServer ) addChannelToDatastoreQueue(receiverChannel chan gstypes.
 func (srv *GRPCServer) removeChannelFromDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle){
 	srv.receiversChannelHolder.Coordinator.Call <- true
 	<- srv.receiversChannelHolder.Coordinator.Ack
-	close(receiverChannel)
 	delete(srv.receiversChannelHolder.Receivers, &receiverChannel)
 	fmt.Println("closing receiver channel")
 	srv.receiversChannelHolder.Coordinator.Done <- true

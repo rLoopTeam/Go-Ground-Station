@@ -119,11 +119,11 @@ func (manager *ServiceManager) Run() {
 }
 
 func (manager *ServiceManager) checkStatus() {
-	fmt.Println("statuschecker running")
+	//fmt.Println("statuschecker running")
 	for t := range manager.serviceCheckTicker.C {
 		manager.StatusMutex.Lock()
 		fmt.Printf("status on %d \n",t.Unix())
-		fmt.Printf("%v \n",manager.Status)
+		//fmt.Printf("%v \n",manager.Status)
 		manager.Status.BroadcasterRunning = manager.udpBroadcaster.isRunning
 		manager.Status.DataStoreManagerRunning = manager.dataStoreManager.IsRunning
 		//manager.Status.GRPCServerRunning = manager.gRPCServer.IsRunning

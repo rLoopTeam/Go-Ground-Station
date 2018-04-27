@@ -113,7 +113,7 @@ func (srv *UDPBroadcasterServer) broadcast (){
 	nodesMap := map[string]string{}
 
 	//populate the map with name and port, this way we can just lookup in the map and not loop through the list each time
-	for _, node := range constants.Hosts{
+	for _, node := range constants.HostsToCommand{
 		nodesMap[node.Name] = strconv.Itoa(node.Port)
 	}
 

@@ -70,6 +70,7 @@ func (manager *DataStoreManager) ProcessNewPacket(packet gstypes.PacketStoreElem
 	manager.rtDataStoreMutex.Unlock()
 	manager.packetStoreCount++
 	fmt.Printf("stored packet count: %d\n",manager.packetStoreCount)
+	//fmt.Printf("latest datastore state: \n %v \n", manager.rtData)
 }
 
 func (manager *DataStoreManager) MakeRTSElement(packetName string,rxTime int64, staticElement gstypes.DataStoreElement) gstypes.RealTimeStreamElement{

@@ -1,0 +1,22 @@
+{
+    "HostsToListen": {
+        "9110": {"Ip": "192.168.0.255", "Port": 9110, "Name": "Power Node A"},
+        "9111": {"Ip": "192.168.0.255", "Port": 9111, "Name": "Power Node B"},
+        "9531": {"Ip": "192.168.0.255", "Port": 9531, "Name": "Flight Control"},
+        "9120": {"Ip": "192.168.0.255", "Port": 9120, "Name": "Landing Gear"},
+        "9130": {"Ip": "192.168.0.255", "Port": 9130, "Name": "Gimbal Control"},
+        "9170": {"Ip": "192.168.0.255", "Port": 9170, "Name": "Xilinx Sim"}
+    },
+
+    "HostsToCommand" : {
+        "9110": {"Ip": "192.168.0.255", "Port": 9110, "Name": "Power Node A"},
+        "9111": {"Ip": "192.168.0.255", "Port": 9111, "Name": "Power Node B"},
+        "9531": {"Ip": "192.168.0.255", "Port": 9531, "Name": "Flight Control"},
+        "9120": {"Ip": "192.168.0.255", "Port": 9120, "Name": "Landing Gear"},
+        "9130": {"Ip": "192.168.0.255", "Port": 9130, "Name": "Gimbal Control"},
+        "9170": {"Ip": "192.168.0.255", "Port": 9170, "Name": "Xilinx Sim"},
+        "9200": {"Ip": "192.168.0.255", "Port": 8888, "Name": "Python Sim"}
+    },
+
+    "GrpcPort": 9800
+}

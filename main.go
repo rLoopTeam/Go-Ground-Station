@@ -36,10 +36,10 @@ func main() {
 		}
 	}else{
 		//calculate the amount of ports that we'll have to listen to
-		amountNodes := len(constants.Hosts)
+		amountNodes := len(constants.HostsToListen)
 		nodesPorts = make([]int, amountNodes)
 		mapIndex := 0
-		for k := range constants.Hosts {
+		for k := range constants.HostsToListen {
 			nodesPorts[mapIndex] = k
 			mapIndex++
 		}
