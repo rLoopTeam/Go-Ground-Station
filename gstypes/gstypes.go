@@ -5,12 +5,6 @@ import (
 	"sync"
 )
 
-type Node struct {
-	IP   string
-	Port int
-	Name string
-}
-
 type Param struct {
 	Name      string
 	Type      types.BasicKind

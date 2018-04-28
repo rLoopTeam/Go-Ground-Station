@@ -83,12 +83,12 @@ func (srv *UDPListenerServer) ProcessMessage(nodePort int, nodeName string, pack
 	defer func() {
 		if r := recover(); r != nil {
 			*errcount++
-			fmt.Println("Problem with parsing packet in: ", r)
-			fmt.Printf("errcount on nodeport %d: %d\n", nodePort,*errcount)
+			//fmt.Println("Problem with parsing packet in: ", r)
+			//fmt.Printf("errcount on nodeport %d: %d\n", nodePort,*errcount)
 		}
 	}()
 
-	element, err := parsing.ParsePacket(nodePort,packet,errcount)
+	element, err := parsing.ParsePacket(nodePort,nodeName,packet,errcount)
 	if err == nil {
 		srv.packetStoreChannel <- element
 		srv.loggerChan<- element
@@ -120,14 +120,17 @@ func (srv *UDPBroadcasterServer) broadcast (){
 		nodesMap[node.Name] = strconv.Itoa(node.Port)
 	}
 
+	//fmt.Printf("hosts: %v", nodesMap)
+
 	srv.isRunning = true
 	for {
 		if !srv.doRun {break}
+		var connErr error
 		//retrieve the next command from the channel
 		cmd := <-srv.ch
 		//lookup which port is to be used
 		port := nodesMap[cmd.Node]
-		addr := "255.255.255.255:" + port
+		addr := "127.0.0.1:" + port
 		//try to resolve the address
 		destination, _ = net.ResolveUDPAddr("udp",addr)
 		//dial up, since it's udp shouldn't be a problem
@@ -144,8 +147,14 @@ func (srv *UDPBroadcasterServer) broadcast (){
 			fmt.Println(err)
 			err = nil
 		} else {
-			conn.Write(packetBytes)
+			fmt.Printf("\n sending command to node: %s on address %s \n",cmd.Node,destination.String())
+			_, connErr = conn.Write(packetBytes)
 		}
+
+		if connErr != nil {
+			fmt.Printf("Command write error: %v", connErr)
+		}
+
 		conn.Close()
 	}
 	srv.isRunning = false
@@ -189,6 +198,7 @@ func CreateNewUDPListenerServers (channel chan<- gstypes.PacketStoreElement, log
 func CreateNewUDPCommandServer(hosts []gstypes.Host) (*UDPBroadcasterServer, chan <- gstypes.Command){
 	commandChannel := make(chan gstypes.Command,32)
 	srv := &UDPBroadcasterServer{
+		hosts:hosts,
 		ch: commandChannel,
 		isRunning:false,
 		doRun:false}
