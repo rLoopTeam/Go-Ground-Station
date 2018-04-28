@@ -2,6 +2,7 @@ package gstypes
 
 import (
 	"go/types"
+	"sync"
 )
 
 type Node struct {
@@ -101,3 +102,47 @@ type ReceiversCoordination struct {
 	Ack chan bool
 	Done chan bool
 }
+
+type ServiceStatus struct {
+	DataStoreMutex sync.RWMutex
+	DataStoreManagerRunning bool
+
+	GRPCMutex sync.RWMutex
+	GRPCServerRunning bool
+
+	BroadcasterMutex sync.RWMutex
+	BroadcasterRunning bool
+
+	GSLoggerMutex sync.RWMutex
+	GSLoggerRunning bool
+
+	PortsListeningMutex sync.RWMutex
+	PortsListening map[int]bool
+}
+
+type Config struct {
+	Networking Networking `json:Networking`
+}
+
+type Networking struct {
+	HostsToListen []Host `json:HostsToListen`
+	HostsToCommand []Host `json:HostsToCommand`
+	Grpc int `json:Grpc`
+}
+
+type Host struct {
+	Ip string `json:Ip`
+	Port int `json:Port`
+	Name string `json:Name`
+}
+
+func NewServiceStatus() ServiceStatus {
+	serviceStatus := ServiceStatus{
+		DataStoreManagerRunning: false,
+		GRPCServerRunning:true,
+		BroadcasterRunning:false,
+		GSLoggerRunning:false,
+		PortsListening: map[int]bool{}}
+	return serviceStatus
+}
+

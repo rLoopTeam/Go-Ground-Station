@@ -28,7 +28,8 @@ According to the [gRPC website](https://grpc.io/docs/quickstart/go.html):
 
 # Running Locally
 
-While developing you can simply run the app with the next command: ```$ go run main.go [<ports>]```. If no ports are defined, default ports defined in the constants package are used.
+While developing you can simply run the app with the next command: ```$ go run main.go [<ports>]```. 
+If no ports are given, default ports defined in the constants package are used.
 
 # Profiling
 

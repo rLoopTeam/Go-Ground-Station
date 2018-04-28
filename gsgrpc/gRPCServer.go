@@ -3,7 +3,6 @@ package gsgrpc
 import (
 	"rloop/Go-Ground-Station/proto"
 	"rloop/Go-Ground-Station/gstypes"
-	"rloop/Go-Ground-Station/constants"
 	"fmt"
 	"sync"
 	"google.golang.org/grpc"
@@ -18,6 +17,7 @@ type GRPCServer struct {
 	serviceChan chan <- *proto.ServerControl
 	commandChannel chan <- gstypes.Command
 	receiversChannelHolder *ChannelsHolder
+	statusProvider StatusProvider
 }
 
 type ChannelsHolder struct {
@@ -28,7 +28,23 @@ type ChannelsHolder struct {
 }
 
 func (srv *GRPCServer) Ping(context.Context, *proto.Ping) (*proto.Pong, error) {
-	return &proto.Pong{},nil
+	srvStat := srv.statusProvider.GetStatus()
+	length := len(srvStat.PortsListening)
+	openPorts := make([]*proto.OpenPort,length)
+	idx := 0
+	for port,serving := range srvStat.PortsListening{
+		openPorts[idx] = &proto.OpenPort{
+			Port:int32(port),
+			Serving:serving}
+		idx++
+	}
+	status := &proto.ServerStatus{
+		DataStoreManagerRunning:srvStat.DataStoreManagerRunning,
+		GRPCServerRunning:srvStat.GRPCServerRunning,
+		BroadcasterRunning:srvStat.BroadcasterRunning,
+		GSLoggerRunning:srvStat.GSLoggerRunning,
+		OpenPorts:openPorts}
+	return &proto.Pong{Status:status},nil
 }
 
 func (srv *GRPCServer) StreamPackets(req *proto.StreamRequest, stream proto.GroundStationService_StreamPacketsServer) error {
@@ -81,7 +97,7 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 		err := binary.Write(buf, binary.LittleEndian, value)
 		if err != nil {
 			ack = nil
-			break;
+			break
 		}else{
 			dataBytesArray[idx] = buf.Bytes()
 		}
@@ -93,7 +109,7 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 		err := binary.Write(buf, binary.LittleEndian, value)
 		if err != nil {
 			ack = nil
-			break;
+			break
 		}else{
 			dataBytesArray[idx] = buf.Bytes()
 		}
@@ -130,7 +146,6 @@ func (srv *GRPCServer ) addChannelToDatastoreQueue(receiverChannel chan gstypes.
 func (srv *GRPCServer) removeChannelFromDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle){
 	srv.receiversChannelHolder.Coordinator.Call <- true
 	<- srv.receiversChannelHolder.Coordinator.Ack
-	close(receiverChannel)
 	delete(srv.receiversChannelHolder.Receivers, &receiverChannel)
 	fmt.Println("closing receiver channel")
 	srv.receiversChannelHolder.Coordinator.Done <- true
@@ -153,21 +168,22 @@ func GetChannelsHolder () *ChannelsHolder {
 	return holder
 }
 
-func newGroundStationGrpcServer (grpcChannelsHolder *ChannelsHolder,commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl) *GRPCServer{
-	server := &GRPCServer{
+func newGroundStationGrpcServer (grpcChannelsHolder *ChannelsHolder,commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl, statusProvider StatusProvider) *GRPCServer{
+	srv := &GRPCServer{
 		receiversChannelHolder:grpcChannelsHolder,
 		commandChannel:commandChannel,
-		serviceChan:serviceChan}
-	return server
+		serviceChan:serviceChan,
+		statusProvider:statusProvider}
+	return srv
 }
 
-func NewGoGrpcServer (grpcChannelsHolder *ChannelsHolder, commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl) (net.Listener, *grpc.Server, error){
-	GSserver := newGroundStationGrpcServer(grpcChannelsHolder, commandChannel, serviceChan)
+func NewGoGrpcServer (port int, grpcChannelsHolder *ChannelsHolder, commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl,statusProvider StatusProvider) (net.Listener, *grpc.Server, error){
+	GSserver := newGroundStationGrpcServer(grpcChannelsHolder, commandChannel, serviceChan, statusProvider)
 	var err error
 	var grpcServer *grpc.Server
 
 	//initialize grpcserver
-	strPort := ":" + strconv.Itoa(constants.GrpcPort)
+	strPort := ":" + strconv.Itoa(port)
 	conn, err := net.Listen("tcp", strPort)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -177,4 +193,8 @@ func NewGoGrpcServer (grpcChannelsHolder *ChannelsHolder, commandChannel chan <-
 	}
 
 	return conn,grpcServer,err
+}
+
+type StatusProvider interface {
+	GetStatus() gstypes.ServiceStatus
 }

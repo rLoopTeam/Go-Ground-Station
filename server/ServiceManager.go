@@ -7,6 +7,9 @@ import (
 	"google.golang.org/grpc"
 	"net"
 	"fmt"
+	"sync"
+	"time"
+	"rloop/Go-Ground-Station/gstypes"
 )
 
 type ServiceManager struct {
@@ -19,6 +22,15 @@ type ServiceManager struct {
 	udpBroadcaster     *UDPBroadcasterServer
 	gsLogger           *logging.Gslogger
 	grpcConn           net.Listener
+	serviceCheckTicker *time.Ticker
+	StatusMutex sync.RWMutex
+	Status gstypes.ServiceStatus
+}
+
+func (manager *ServiceManager) GetStatus() gstypes.ServiceStatus{
+	manager.StatusMutex.RLock()
+	defer manager.StatusMutex.RUnlock()
+	return manager.Status
 }
 
 func (manager *ServiceManager) SetGsLogger(logger *logging.Gslogger) {
@@ -43,12 +55,20 @@ func (manager *ServiceManager) SetUDPBroadcaster(broadcaster *UDPBroadcasterServ
 }
 
 func (manager *ServiceManager) RunAll() {
+	fmt.Println("startlogger")
 	manager.StartLogger()
+	fmt.Println("startdatastore")
 	manager.StartDatastoreManager()
+	fmt.Println("startudplisteners")
 	manager.StartUDPListeners()
+	fmt.Println("startgrpc")
 	manager.StartGrpcServer()
+	fmt.Println("startbroadcaster")
 	manager.StartBroadcaster()
+	fmt.Println("starrun")
 	go manager.Run()
+	fmt.Println("startcheckstatus")
+	go manager.checkStatus()
 }
 func (manager *ServiceManager) StopAll() {
 	manager.StopLogger()
@@ -73,7 +93,7 @@ func (manager *ServiceManager) StopBroadcaster() { manager.udpBroadcaster.Stop()
 
 func (manager *ServiceManager) StartGrpcServer() {
 	if manager.gRPCServer != nil {
-		manager.gRPCServer.Serve(manager.grpcConn)
+		go manager.gRPCServer.Serve(manager.grpcConn)
 	} else {
 		fmt.Println("cannot start grpc service, server is not set")
 	}
@@ -95,6 +115,23 @@ func (manager *ServiceManager) Run() {
 		}
 		control := <-manager.serviceChan
 		manager.executeControl(control)
+	}
+}
+
+func (manager *ServiceManager) checkStatus() {
+	//fmt.Println("statuschecker running")
+	for t := range manager.serviceCheckTicker.C {
+		manager.StatusMutex.Lock()
+		fmt.Printf("status on %d \n",t.Unix())
+		//fmt.Printf("%v \n",manager.Status)
+		manager.Status.BroadcasterRunning = manager.udpBroadcaster.isRunning
+		manager.Status.DataStoreManagerRunning = manager.dataStoreManager.IsRunning
+		//manager.Status.GRPCServerRunning = manager.gRPCServer.IsRunning
+		manager.Status.GSLoggerRunning = manager.gsLogger.IsRunning
+		for _, srv := range manager.udpListenerServers {
+			manager.Status.PortsListening[srv.ServerPort] = srv.IsRunning
+		}
+		manager.StatusMutex.Unlock()
 	}
 }
 
@@ -130,6 +167,10 @@ func NewServiceManager() (*ServiceManager, chan<- *proto.ServerControl) {
 	serviceManager := &ServiceManager{
 		serviceChan: srvcChan,
 		isRunning:   false,
-		doRun:       false}
+		doRun:       false,
+		serviceCheckTicker: time.NewTicker(time.Second*5),
+		StatusMutex: sync.RWMutex{},
+		Status: gstypes.NewServiceStatus()}
+
 	return serviceManager, srvcChan
 }

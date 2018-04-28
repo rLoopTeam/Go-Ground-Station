@@ -11,7 +11,7 @@ import (
 )
 
 type DataStoreManager struct {
-	isRunning bool
+	IsRunning bool
 	doRun bool
 	packetChannel <-chan gstypes.PacketStoreElement
 	receiversChannelHolder *gsgrpc.ChannelsHolder
@@ -24,17 +24,17 @@ type DataStoreManager struct {
 
 func (manager *DataStoreManager) Start (){
 	manager.doRun = true
-	if !manager.isRunning {
+	if !manager.IsRunning {
 		fmt.Println("go run manager run")
 		go manager.run()
 		fmt.Println("go run checker")
 		go manager.checker()
-		manager.isRunning = true;
+		manager.IsRunning = true
 	}
 }
 
 func (manager *DataStoreManager) Stop(){
-	manager.doRun = false;
+	manager.doRun = false
 }
 
 func (manager *DataStoreManager) run (){
@@ -45,7 +45,8 @@ func (manager *DataStoreManager) run (){
 		//this call is necessary so that the goroutine doesn't use too many cpu time at once
 		runtime.Gosched()
 	}
-	manager.isRunning = false
+	fmt.Println("manager isrunning = false")
+	manager.IsRunning = false
 }
 
 func (manager *DataStoreManager) ProcessNewPacket(packet gstypes.PacketStoreElement){
@@ -69,6 +70,7 @@ func (manager *DataStoreManager) ProcessNewPacket(packet gstypes.PacketStoreElem
 	manager.rtDataStoreMutex.Unlock()
 	manager.packetStoreCount++
 	fmt.Printf("stored packet count: %d\n",manager.packetStoreCount)
+	//fmt.Printf("latest datastore state: \n %v \n", manager.rtData)
 }
 
 func (manager *DataStoreManager) MakeRTSElement(packetName string,rxTime int64, staticElement gstypes.DataStoreElement) gstypes.RealTimeStreamElement{
