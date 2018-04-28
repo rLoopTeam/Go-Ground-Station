@@ -3,7 +3,6 @@ package gsgrpc
 import (
 	"rloop/Go-Ground-Station/proto"
 	"rloop/Go-Ground-Station/gstypes"
-	"rloop/Go-Ground-Station/constants"
 	"fmt"
 	"sync"
 	"google.golang.org/grpc"
@@ -178,13 +177,13 @@ func newGroundStationGrpcServer (grpcChannelsHolder *ChannelsHolder,commandChann
 	return srv
 }
 
-func NewGoGrpcServer (grpcChannelsHolder *ChannelsHolder, commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl,statusProvider StatusProvider) (net.Listener, *grpc.Server, error){
+func NewGoGrpcServer (port int, grpcChannelsHolder *ChannelsHolder, commandChannel chan <- gstypes.Command, serviceChan chan<- *proto.ServerControl,statusProvider StatusProvider) (net.Listener, *grpc.Server, error){
 	GSserver := newGroundStationGrpcServer(grpcChannelsHolder, commandChannel, serviceChan, statusProvider)
 	var err error
 	var grpcServer *grpc.Server
 
 	//initialize grpcserver
-	strPort := ":" + strconv.Itoa(constants.GrpcPort)
+	strPort := ":" + strconv.Itoa(port)
 	conn, err := net.Listen("tcp", strPort)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)

@@ -10,8 +10,9 @@ import (
 	"log"
 	"net/http"
 	"flag"
-	"rloop/Go-Ground-Station/constants"
 	"strconv"
+	"rloop/Go-Ground-Station/helpers"
+	"rloop/Go-Ground-Station/gstypes"
 )
 
 func main() {
@@ -20,10 +21,27 @@ func main() {
 	}()
 	fmt.Println("Backend version 13-04-2018")
 
-	//PARSE FLAGS AND DETERMINE WHICH PORTS THE SERVER WILL LISTEN TO
+	NetworkConfig := helpers.DecodeNetworkingFile("./constants/networking.json")
+	HostsTolisten := NetworkConfig.HostsToListen
+	HostsToCommand := NetworkConfig.HostsToCommand
+	GrpcPort := NetworkConfig.Grpc
+	nodesMap := map[int]gstypes.Host{}
+	var nodesPorts []int
+
+	//create the nodes map, for efficiency
+	arrlength := len(HostsTolisten)
+	nodesPorts = make([]int, arrlength)
+	for idx := 0; idx < arrlength; idx++ {
+		currPort := HostsTolisten[idx].Port
+		nodesMap[currPort] = HostsTolisten[idx]
+		nodesPorts[idx] = currPort
+	}
+
+
+	//PARSE FLAGS, IF FLAGS ARE GIVEN DETERMINE WHICH PORTS THE SERVER WILL LISTEN TO ELSE DO NOTHING AND USE PORTS FROM CONFIG FILE
 	//the array that will hold the port numbers for the UDP listeners
 	flag.Parse()
-	var nodesPorts []int
+
 	flags := flag.Args()
 	flagLength := len(flags)
 	if flagLength > 0 {
@@ -33,15 +51,6 @@ func main() {
 			if err == nil{
 				nodesPorts[i] = port
 			}
-		}
-	}else{
-		//calculate the amount of ports that we'll have to listen to
-		amountNodes := len(constants.HostsToListen)
-		nodesPorts = make([]int, amountNodes)
-		mapIndex := 0
-		for k := range constants.HostsToListen {
-			nodesPorts[mapIndex] = k
-			mapIndex++
 		}
 	}
 
@@ -53,11 +62,11 @@ func main() {
 	//Create the datastoremanager server
 	dataStoreManager, dataStoreChannel := datastore.New(grpcChannelsHolder)
 	//create the broadcasting server that will send the commands to the rpod
-	udpBroadCasterServer, commandChannel := server.CreateNewUDPCommandServer()
+	udpBroadCasterServer, commandChannel := server.CreateNewUDPCommandServer(HostsToCommand)
 	//Create the UDPListenerServers that will listen to the packets sent by the rpod
-	udpListenerServers := server.CreateNewUDPListenerServers(dataStoreChannel,loggerChannel,nodesPorts)
+	udpListenerServers := server.CreateNewUDPListenerServers(dataStoreChannel,loggerChannel,nodesPorts, nodesMap)
 	//Create the gsgrpc stream server
-	conn, grpcServer, err := gsgrpc.NewGoGrpcServer(grpcChannelsHolder,commandChannel,serviceChannel, serviceManager)
+	conn, grpcServer, err := gsgrpc.NewGoGrpcServer(GrpcPort, grpcChannelsHolder,commandChannel,serviceChannel, serviceManager)
 
 	serviceManager.SetDatastoreManager(dataStoreManager)
 	serviceManager.SetGsLogger(gsLogger)

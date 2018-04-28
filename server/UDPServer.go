@@ -6,7 +6,6 @@ import (
 	"strings"
 	"rloop/Go-Ground-Station/gstypes"
 	"strconv"
-	"rloop/Go-Ground-Station/constants"
 	"log"
 	"rloop/Go-Ground-Station/helpers"
 	"rloop/Go-Ground-Station/parsing"
@@ -17,6 +16,7 @@ type GSUDPServer interface {
 }
 
 type UDPBroadcasterServer struct {
+	hosts []gstypes.Host
 	isRunning bool
 	doRun bool
 	ch <-chan gstypes.Command
@@ -27,6 +27,7 @@ type UDPListenerServer struct {
 	doRun bool
 	conn      *net.UDPConn
 	ServerPort int
+	NodeName string
 	packetStoreChannel chan<- gstypes.PacketStoreElement
 	loggerChan chan<-gstypes.PacketStoreElement
 }
@@ -41,6 +42,8 @@ func (srv *UDPListenerServer) open(port int) error {
 	if err == nil {
 		srv.conn, err = net.ListenUDP("udp4", udpAddr)
 		fmt.Printf("\n listening on port: %d \n", port)
+	}else {
+		fmt.Printf("UDPSERVER ERROR: %v \n", err)
 	}
 
 	return err
@@ -70,13 +73,13 @@ func (srv *UDPListenerServer) listen() {
 			return
 		}
 		if n > 0 {
-			srv.ProcessMessage(srv.ServerPort, buffer[:n], &errCount)
+			srv.ProcessMessage(srv.ServerPort,srv.NodeName, buffer[:n], &errCount)
 		}
 	}
 	srv.IsRunning = false
 }
 
-func (srv *UDPListenerServer) ProcessMessage(nodePort int, packet []byte, errcount *int){
+func (srv *UDPListenerServer) ProcessMessage(nodePort int, nodeName string, packet []byte, errcount *int){
 	defer func() {
 		if r := recover(); r != nil {
 			*errcount++
@@ -113,7 +116,7 @@ func (srv *UDPBroadcasterServer) broadcast (){
 	nodesMap := map[string]string{}
 
 	//populate the map with name and port, this way we can just lookup in the map and not loop through the list each time
-	for _, node := range constants.HostsToCommand{
+	for _, node := range srv.hosts{
 		nodesMap[node.Name] = strconv.Itoa(node.Port)
 	}
 
@@ -159,7 +162,7 @@ func serialize(cmd gstypes.Command) ([]byte, error){
 	return bytes, err
 }
 
-func CreateNewUDPListenerServers (channel chan<- gstypes.PacketStoreElement, loggerChannel chan <- gstypes.PacketStoreElement, nodesPorts []int) []*UDPListenerServer{
+func CreateNewUDPListenerServers (channel chan<- gstypes.PacketStoreElement, loggerChannel chan <- gstypes.PacketStoreElement, nodesPorts []int, nodesMap map[int]gstypes.Host) []*UDPListenerServer{
 	amountNodes := len(nodesPorts)
 	//create an array that will keep the servers
 	serversArray := make([]*UDPListenerServer,amountNodes)
@@ -171,7 +174,8 @@ func CreateNewUDPListenerServers (channel chan<- gstypes.PacketStoreElement, log
 			IsRunning: false,
 			doRun: false,
 			packetStoreChannel: channel,
-			loggerChan:loggerChannel}
+			loggerChan:loggerChannel,
+			NodeName:nodesMap[nodesPorts[idx]].Name}
 		err := srv.open(nodesPorts[idx])
 		if err == nil {
 			serversArray[idx] = srv
@@ -182,7 +186,7 @@ func CreateNewUDPListenerServers (channel chan<- gstypes.PacketStoreElement, log
 	return serversArray
 }
 
-func CreateNewUDPCommandServer() (*UDPBroadcasterServer, chan <- gstypes.Command){
+func CreateNewUDPCommandServer(hosts []gstypes.Host) (*UDPBroadcasterServer, chan <- gstypes.Command){
 	commandChannel := make(chan gstypes.Command,32)
 	srv := &UDPBroadcasterServer{
 		ch: commandChannel,

@@ -120,6 +120,22 @@ type ServiceStatus struct {
 	PortsListening map[int]bool
 }
 
+type Config struct {
+	Networking Networking `json:Networking`
+}
+
+type Networking struct {
+	HostsToListen []Host `json:HostsToListen`
+	HostsToCommand []Host `json:HostsToCommand`
+	Grpc int `json:Grpc`
+}
+
+type Host struct {
+	Ip string `json:Ip`
+	Port int `json:Port`
+	Name string `json:Name`
+}
+
 func NewServiceStatus() ServiceStatus {
 	serviceStatus := ServiceStatus{
 		DataStoreManagerRunning: false,
@@ -129,3 +145,4 @@ func NewServiceStatus() ServiceStatus {
 		PortsListening: map[int]bool{}}
 	return serviceStatus
 }
+
