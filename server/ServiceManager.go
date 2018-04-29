@@ -21,6 +21,7 @@ type ServiceManager struct {
 	udpListenerServers []*UDPListenerServer
 	udpBroadcaster     *UDPBroadcasterServer
 	gsLogger           *logging.Gslogger
+	simController *SimController
 	grpcConn           net.Listener
 	serviceCheckTicker *time.Ticker
 	StatusMutex sync.RWMutex
@@ -54,6 +55,10 @@ func (manager *ServiceManager) SetUDPBroadcaster(broadcaster *UDPBroadcasterServ
 	manager.udpBroadcaster = broadcaster
 }
 
+func (manager *ServiceManager) SetSimController(simController *SimController) {
+	manager.simController = simController
+}
+
 func (manager *ServiceManager) RunAll() {
 	fmt.Println("startlogger")
 	manager.StartLogger()
@@ -69,6 +74,8 @@ func (manager *ServiceManager) RunAll() {
 	go manager.Run()
 	fmt.Println("startcheckstatus")
 	go manager.checkStatus()
+	fmt.Println("startSimController")
+	go manager.StartSimController()
 }
 func (manager *ServiceManager) StopAll() {
 	manager.StopLogger()
@@ -106,6 +113,10 @@ func (manager *ServiceManager) StartLogger() {
 	}
 }
 func (manager *ServiceManager) StopLogger() { manager.gsLogger.Stop() }
+
+func (manager *ServiceManager) StartSimController() {manager.simController.Run()}
+
+func (manager *ServiceManager) StopSimController() {manager.simController.Stop()}
 
 func (manager *ServiceManager) Run() {
 	manager.doRun = true

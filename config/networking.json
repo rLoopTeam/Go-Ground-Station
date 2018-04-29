@@ -69,6 +69,7 @@
         "Name": "Python Sim"
       }
     ],
-    "Grpc": 9800
+    "Grpc": 9800,
+    "WithSim": true
   }
 }

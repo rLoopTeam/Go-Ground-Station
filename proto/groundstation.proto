@@ -4,6 +4,7 @@ package proto;
 service GroundStationService {
     rpc streamPackets (StreamRequest) returns (stream DataBundle){}
     rpc sendCommand (Command) returns (Ack){}
+    rpc sendSimCommand (SimCommand) returns (Ack){}
     rpc ping (Ping) returns (Pong){}
     rpc controlServer (ServerControl) returns (Ack){}
 }
@@ -32,7 +33,19 @@ message Command {
     repeated int32 Data = 3;
 }
 
-message Ack {}
+message SimCommand {
+    enum SimCommandEnum {
+        StartSimulator = 0;
+        PauseSimulator = 1;
+        ResumeSimulator = 2;
+        StopSimulator = 3;
+    }
+    SimCommandEnum Command = 1;
+}
+
+message Ack {
+    bool CommandExecuted = 1;
+}
 
 message ServerStatus {
     bool DataStoreManagerRunning = 1;

@@ -122,6 +122,7 @@ type Networking struct {
 	HostsToListen []Host `json:HostsToListen`
 	HostsToCommand []Host `json:HostsToCommand`
 	Grpc int `json:Grpc`
+	WithSim bool `json:WithSim`
 }
 
 type Host struct {

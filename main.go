@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"rloop/Go-Ground-Station/helpers"
 	"rloop/Go-Ground-Station/gstypes"
+	"os"
 )
 
 func main() {
@@ -21,7 +22,11 @@ func main() {
 	}()
 	fmt.Println("Backend version 13-04-2018")
 
-	NetworkConfig := helpers.DecodeNetworkingFile("./constants/networking.json")
+	NetworkConfig := helpers.DecodeNetworkingFile("./config/networking.json")
+	if NetworkConfig == nil {
+		log.Fatal("No config is defined, please define a config file")
+		os.Exit(1)
+	}
 	HostsTolisten := NetworkConfig.HostsToListen
 	HostsToCommand := NetworkConfig.HostsToCommand
 	GrpcPort := NetworkConfig.Grpc
@@ -54,11 +59,19 @@ func main() {
 		}
 	}
 
+	//create a servicemanager and get the channel where control commands will be issued
+	serviceManager, serviceChannel := server.NewServiceManager()
+
+	var simCommandChannel chan<-gstypes.Command
+	var simController *server.SimController
+	if NetworkConfig.WithSim {
+		simController, simCommandChannel = server.NewSimController()
+		serviceManager.SetSimController(simController)
+	}
+
 	gsLogger, loggerChannel := logging.New()
 	//struct that will contain the channels that will be used to communicate between the datastoremanager and stream server
 	grpcChannelsHolder := gsgrpc.GetChannelsHolder()
-	//create a servicemanager and get the channel where control commands will be issued
-	serviceManager, serviceChannel := server.NewServiceManager()
 	//Create the datastoremanager server
 	dataStoreManager, dataStoreChannel := datastore.New(grpcChannelsHolder)
 	//create the broadcasting server that will send the commands to the rpod
@@ -66,7 +79,7 @@ func main() {
 	//Create the UDPListenerServers that will listen to the packets sent by the rpod
 	udpListenerServers := server.CreateNewUDPListenerServers(dataStoreChannel,loggerChannel,nodesPorts, nodesMap)
 	//Create the gsgrpc stream server
-	conn, grpcServer, err := gsgrpc.NewGoGrpcServer(GrpcPort, grpcChannelsHolder,commandChannel,serviceChannel, serviceManager)
+	conn, grpcServer, err := gsgrpc.NewGoGrpcServer(GrpcPort, grpcChannelsHolder,commandChannel,simCommandChannel, serviceChannel, serviceManager)
 
 	serviceManager.SetDatastoreManager(dataStoreManager)
 	serviceManager.SetGsLogger(gsLogger)
