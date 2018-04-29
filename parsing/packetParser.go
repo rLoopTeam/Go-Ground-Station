@@ -9,7 +9,7 @@ import (
 	"errors"
 )
 
-func ParsePacket(nodePort int, packet []byte, errcount *int) (gstypes.PacketStoreElement,error) {
+func ParsePacket(nodePort int, nodeName string, packet []byte, errcount *int) (gstypes.PacketStoreElement,error) {
 	//var packetStoreElement gstypes.PacketStoreElement
 	//var err error
 	packetLength := len(packet)
@@ -38,17 +38,15 @@ func ParsePacket(nodePort int, packet []byte, errcount *int) (gstypes.PacketStor
 		err = errors.New("CRC check failed")
 	}
 	*/
-	return ParsePayload(definition, payloadLengthInt, nodePort, payload)
+	return ParsePayload(definition, payloadLengthInt, nodePort, nodeName, payload)
 }
 
-func ParsePayload(definition gstypes.PacketDefinition, payloadLength int, port int,payload []byte) (gstypes.PacketStoreElement, error) {
+func ParsePayload(definition gstypes.PacketDefinition, payloadLength int, port int, nodeName string, payload []byte) (gstypes.PacketStoreElement, error) {
 	packetStoreElement := gstypes.PacketStoreElement{}
 	var parseError error = nil
 	//Declare variable that will be forwarded to the consumers
 	var dataStoreElement gstypes.DataStoreElement
 	var currentParameter gstypes.Param
-	//need the nodenames to distinguish the hosts with similar functions
-	nodeName := constants.HostsToListen[port].Name
 	//Retrieve the metadata for the particular host, in some cases the same packet types are used by different hosts
 	nodeMetaData := definition.MetaData[nodeName]
 	//retrieve all the parameters (array of parameter objects)
