@@ -69,7 +69,7 @@ func (manager *DataStoreManager) ProcessNewPacket(packet gstypes.PacketStoreElem
 	manager.saveToDataStore(dataBundle)
 	manager.rtDataStoreMutex.Unlock()
 	manager.packetStoreCount++
-	//fmt.Printf("stored packet count: %d\n",manager.packetStoreCount)
+	fmt.Printf("stored packet count: %d\n",manager.packetStoreCount)
 	//fmt.Printf("latest datastore state: \n %v \n", manager.rtData)
 }
 

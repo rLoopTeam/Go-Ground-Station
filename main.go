@@ -14,6 +14,7 @@ import (
 	"rloop/Go-Ground-Station/helpers"
 	"rloop/Go-Ground-Station/gstypes"
 	"os"
+	"rloop/Go-Ground-Station/simproto"
 )
 
 func main() {
@@ -22,9 +23,10 @@ func main() {
 	}()
 	fmt.Println("Backend version 13-04-2018")
 
-	NetworkConfig := helpers.DecodeNetworkingFile("./config/networking.json")
-	if NetworkConfig == nil {
-		log.Fatal("No config is defined, please define a config file")
+	NetworkConfig,err := helpers.DecodeNetworkingFile("./config/networking.json")
+
+	if err != nil {
+		log.Fatalf("No config is defined, please define a config file: %v \n", err)
 		os.Exit(1)
 	}
 	HostsTolisten := NetworkConfig.HostsToListen
@@ -62,7 +64,7 @@ func main() {
 	//create a servicemanager and get the channel where control commands will be issued
 	serviceManager, serviceChannel := server.NewServiceManager()
 
-	var simCommandChannel chan<-gstypes.Command
+	var simCommandChannel chan<-*simproto.SimCommand
 	var simController *server.SimController
 	if NetworkConfig.WithSim {
 		simController, simCommandChannel = server.NewSimController()

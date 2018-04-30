@@ -2,7 +2,6 @@ package server
 
 import (
 	"google.golang.org/grpc"
-	"rloop/Go-Ground-Station/gstypes"
 	"log"
 	"fmt"
 	"context"
@@ -16,7 +15,7 @@ type SimController struct {
 	conn *grpc.ClientConn
 	client simproto.SimControlServiceClient
 	signalChan chan bool
-	commandChan <- chan gstypes.Command
+	commandChan <- chan *simproto.SimCommand
 }
 
 func(client *SimController) Stop() {
@@ -36,13 +35,13 @@ func (client *SimController) Run(){
 		case <-client.signalChan:break
 		}
 	}
+	client.conn.Close()
 	client.IsRunning = false;
 }
 
-func (client *SimController) SendCommand(cmd gstypes.Command) *proto.Ack{
+func (client *SimController) SendCommand(cmd *simproto.SimCommand) *proto.Ack{
 	rack := &proto.Ack{}
-	comd := &simproto.SimCommand{}
-	ack, err := client.client.SendSimCommand(context.Background(),comd)
+	ack, err := client.client.SendSimCommand(context.Background(),cmd)
 	if err != nil {
 		log.Printf("SimControl send failed: %v \n",err)
 		rack.CommandExecuted = false
@@ -61,9 +60,9 @@ func (client *SimController) Connect(address string){
 	client.client = simproto.NewSimControlServiceClient(client.conn)
 }
 
-func NewSimController() (*SimController,chan <- gstypes.Command){
+func NewSimController() (*SimController,chan <- *simproto.SimCommand){
 	signalCh := make(chan bool)
-	commandCh := make(chan gstypes.Command)
+	commandCh := make(chan *simproto.SimCommand)
 	controller := &SimController{
 		signalChan:signalCh,
 		commandChan:commandCh,

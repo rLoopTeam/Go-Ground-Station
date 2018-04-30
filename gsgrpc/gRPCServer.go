@@ -181,7 +181,7 @@ func GetChannelsHolder () *ChannelsHolder {
 	return holder
 }
 
-func newGroundStationGrpcServer (grpcChannelsHolder *ChannelsHolder,commandChannel chan <- gstypes.Command, simCommandChannel chan<-gstypes.Command, serviceChan chan<- *proto.ServerControl, statusProvider StatusProvider) *GRPCServer{
+func newGroundStationGrpcServer (grpcChannelsHolder *ChannelsHolder,commandChannel chan <- gstypes.Command, simCommandChannel chan<-*simproto.SimCommand, serviceChan chan<- *proto.ServerControl, statusProvider StatusProvider) *GRPCServer{
 	srv := &GRPCServer{
 		receiversChannelHolder:grpcChannelsHolder,
 		commandChannel:commandChannel,
@@ -191,7 +191,7 @@ func newGroundStationGrpcServer (grpcChannelsHolder *ChannelsHolder,commandChann
 	return srv
 }
 
-func NewGoGrpcServer (port int, grpcChannelsHolder *ChannelsHolder, commandChannel chan <- gstypes.Command, simCommandChannel chan<-gstypes.Command, serviceChan chan<- *proto.ServerControl,statusProvider StatusProvider) (net.Listener, *grpc.Server, error){
+func NewGoGrpcServer (port int, grpcChannelsHolder *ChannelsHolder, commandChannel chan <- gstypes.Command, simCommandChannel chan<-*simproto.SimCommand, serviceChan chan<- *proto.ServerControl,statusProvider StatusProvider) (net.Listener, *grpc.Server, error){
 	GSserver := newGroundStationGrpcServer(grpcChannelsHolder, commandChannel, simCommandChannel, serviceChan, statusProvider)
 	var err error
 	var grpcServer *grpc.Server
