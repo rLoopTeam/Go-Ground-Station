@@ -165,18 +165,22 @@ func (srv *GRPCServer) SendSimCommand(ctx context.Context, command *proto.SimCom
 }
 
 func (srv *GRPCServer) addChannelToDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle) {
-	srv.receiversChannelHolder.Coordinator.Call <- true
-	<-srv.receiversChannelHolder.Coordinator.Ack
+	//srv.receiversChannelHolder.Coordinator.Call <- true
+	//<-srv.receiversChannelHolder.Coordinator.Ack
+	srv.receiversChannelHolder.ReceiverMutex.Lock()
 	srv.receiversChannelHolder.Receivers[&receiverChannel] = &receiverChannel
-	srv.receiversChannelHolder.Coordinator.Done <- true
+	srv.receiversChannelHolder.ReceiverMutex.Unlock()
+	//srv.receiversChannelHolder.Coordinator.Done <- true
 }
 
 func (srv *GRPCServer) removeChannelFromDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle) {
-	srv.receiversChannelHolder.Coordinator.Call <- true
-	<-srv.receiversChannelHolder.Coordinator.Ack
+	//srv.receiversChannelHolder.Coordinator.Call <- true
+	//<-srv.receiversChannelHolder.Coordinator.Ack
+	srv.receiversChannelHolder.ReceiverMutex.Lock()
 	delete(srv.receiversChannelHolder.Receivers, &receiverChannel)
 	fmt.Println("closing receiver channel")
-	srv.receiversChannelHolder.Coordinator.Done <- true
+	srv.receiversChannelHolder.ReceiverMutex.Unlock()
+	//srv.receiversChannelHolder.Coordinator.Done <- true
 }
 
 func GetChannelsHolder() *ChannelsHolder {

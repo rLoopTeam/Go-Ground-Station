@@ -55,7 +55,7 @@ MainLoop:
 		//this call is necessary so that the goroutine doesn't use too many cpu time at once
 		runtime.Gosched()
 	}
-	fmt.Println("manager isrunning = false")
+	fmt.Println("datastoremanager isrunning = false")
 	manager.IsRunning = false
 }
 
@@ -184,12 +184,15 @@ func (manager *DataStoreManager) saveToDataStore(dataBundle gstypes.RealTimeData
 
 func (manager *DataStoreManager) sendDataBundle(dataBundle gstypes.RealTimeDataBundle) {
 	//check if grpc wants to push a subscriber to the map
+	/*
 	select {
 	case <-manager.receiversChannelHolder.Coordinator.Call:
 		manager.receiversChannelHolder.Coordinator.Ack <- true
 		<-manager.receiversChannelHolder.Coordinator.Done
 	default:
 	}
+	*/
+	manager.receiversChannelHolder.ReceiverMutex.Lock()
 	//send the bundle to all subscribers
 	for channel := range manager.receiversChannelHolder.Receivers {
 		select {
@@ -198,6 +201,7 @@ func (manager *DataStoreManager) sendDataBundle(dataBundle gstypes.RealTimeDataB
 			fmt.Printf("streamerchannel is full \n")
 		}
 	}
+	manager.receiversChannelHolder.ReceiverMutex.Unlock()
 }
 
 func cleanJoin(prefix string, name string) string {

@@ -126,6 +126,7 @@ func (manager *ServiceManager) Run() {
 			break
 		}
 		control := <-manager.serviceChan
+		fmt.Printf("Service Control requested: %v \n", control.Command)
 		manager.executeControl(control)
 	}
 }

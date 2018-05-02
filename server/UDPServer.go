@@ -131,6 +131,7 @@ func (srv *UDPBroadcasterServer) Run() {
 func (srv *UDPBroadcasterServer) Stop() {
 	if srv.isRunning {
 		srv.signalChannel <- true
+		fmt.Println("broadcaster signal sent")
 	}
 	srv.doRun = false
 }
@@ -154,15 +155,30 @@ func (srv *UDPBroadcasterServer) broadcast() {
 BroadCastLoop:
 	for {
 		select {
-		case cmd = <-srv.commandChannel:
-			goto Broadcast
 		case <-srv.signalChannel:
+			fmt.Println("Broadcaster Stop")
 			break BroadCastLoop
+		case cmd = <-srv.commandChannel:
+			fmt.Println("received request for command broadcast")
+			goto Broadcast
 		}
+		/*
+		select {
+		case <-srv.signalChannel:
+			fmt.Println("Broadcaster Stop")
+			break BroadCastLoop
+		default:
+		}
+		select {
+		case cmd = <-srv.commandChannel:
+			fmt.Println("received request for command broadcast")
+			goto Broadcast
+			default: continue
+		}
+		*/
 	Broadcast:
 		var connErr error
 		//retrieve the next command from the channel
-
 		//lookup which port is to be used
 		port := nodesMap[cmd.Node]
 		addr := "127.0.0.1:" + port
@@ -182,14 +198,13 @@ BroadCastLoop:
 			fmt.Println(err)
 			err = nil
 		} else {
-			fmt.Printf("\n sending command to node: %s on address %s \n", cmd.Node, destination.String())
+			//fmt.Printf("\n sending command to node: %s on address %s \n", cmd.Node, destination.String())
 			_, connErr = conn.Write(packetBytes)
 		}
 
 		if connErr != nil {
 			fmt.Printf("Command write error: %v", connErr)
 		}
-
 		conn.Close()
 	}
 	srv.isRunning = false
@@ -231,8 +246,10 @@ func CreateNewUDPListenerServers(channel chan<- gstypes.PacketStoreElement, logg
 }
 
 func CreateNewUDPCommandServer(hosts []gstypes.Host) (*UDPBroadcasterServer, chan<- gstypes.Command) {
-	commandChannel := make(chan gstypes.Command, 32)
+	signalChannel:= make(chan bool)
+	commandChannel := make(chan gstypes.Command, 4)
 	srv := &UDPBroadcasterServer{
+		signalChannel: signalChannel,
 		hosts:          hosts,
 		commandChannel: commandChannel,
 		isRunning:      false,
