@@ -70,6 +70,7 @@
       }
     ],
     "Grpc": 9800,
+    "PySim": "localhost:9333",
     "WithSim": true
   }
 }

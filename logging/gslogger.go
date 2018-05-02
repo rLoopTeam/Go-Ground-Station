@@ -1,32 +1,36 @@
 package logging
 
 import (
-	"rloop/Go-Ground-Station/gstypes"
-	"os"
 	"encoding/csv"
+	"fmt"
 	"log"
+	"os"
+	"rloop/Go-Ground-Station/gstypes"
 	"strconv"
 	"time"
-	"fmt"
 )
 
 type Gslogger struct {
-	ticker *time.Ticker
-	DataChan <- chan gstypes.PacketStoreElement
-	doRun bool
-	IsRunning bool
+	ticker     *time.Ticker
+	DataChan   <-chan gstypes.PacketStoreElement
+	signalChan chan bool
+	doRun      bool
+	IsRunning  bool
 }
 
-func (gslogger *Gslogger) Start(){
+func (gslogger *Gslogger) Start() {
 	gslogger.doRun = true
 	gslogger.run()
 }
 
-func (gslogger *Gslogger) Stop(){
-	gslogger.doRun = false
+func (gslogger *Gslogger) Stop() {
+	if gslogger.IsRunning {
+		gslogger.signalChan <- true
+		gslogger.doRun = false
+	}
 }
 
-func (gslogger *Gslogger) run (){
+func (gslogger *Gslogger) run() {
 	currTime := time.Now()
 	day := strconv.Itoa(currTime.Day())
 	month := currTime.Month().String()
@@ -35,8 +39,9 @@ func (gslogger *Gslogger) run (){
 	minute := strconv.Itoa(currTime.Minute())
 	//seconds := strconv.Itoa(currTime.Second())
 
-	fileName := fmt.Sprintf("gslog_%s-%s-%s_%s%s.csv",day,month,year,hour,minute)
-	headers := []string{"rxtime","port","nodename","packtype","packetname","prefix","parametername","units","value"}
+	fileName := fmt.Sprintf("gslog_%s-%s-%s_%s%s.csv", day, month, year, hour, minute)
+	headers := []string{"rxtime", "port", "nodename", "packtype", "packetname", "prefix", "parametername", "units", "value"}
+
 	file, err := os.Create(fileName)
 	if err != nil {
 		log.Fatal("Error Creating log file:", err)
@@ -46,36 +51,47 @@ func (gslogger *Gslogger) run (){
 	writer := csv.NewWriter(file)
 	writer.Write(headers)
 	gslogger.IsRunning = true
-	for data := range gslogger.DataChan {
-		if(!gslogger.doRun){break}
-
-		rxtime := strconv.FormatInt(data.RxTime,10)
-		port := strconv.FormatInt(int64(data.Port),10)
-		packetType := strconv.FormatInt(int64(data.PacketType),10)
-		packetName := data.PacketName
-		parameterPrefix := data.ParameterPrefix
-		parameters := data.Parameters
-		for _,param := range parameters{
-			line := []string{rxtime,port,packetType,packetName,parameterPrefix,param.ParameterName,param.Units,param.Data.AsString()}
-			err := writer.Write(line)
-			if err != nil {
-				log.Fatal("Error Writing log file:", err)
-			}
-		}
+MainLoop:
+	for {
 		select {
-		case <- gslogger.ticker.C: writer.Flush()
-		default:
+		case data := <-gslogger.DataChan:
+			gslogger.write(data, writer)
+		case <-gslogger.signalChan:
+			break MainLoop
 		}
 	}
 	gslogger.IsRunning = false
 }
 
-func New() (*Gslogger, chan <- gstypes.PacketStoreElement){
+func (gsLogger *Gslogger) write(data gstypes.PacketStoreElement, writer *csv.Writer) {
+	rxtime := strconv.FormatInt(data.RxTime, 10)
+	port := strconv.FormatInt(int64(data.Port), 10)
+	packetType := strconv.FormatInt(int64(data.PacketType), 10)
+	packetName := data.PacketName
+	parameterPrefix := data.ParameterPrefix
+	parameters := data.Parameters
+	for _, param := range parameters {
+		line := []string{rxtime, port, packetType, packetName, parameterPrefix, param.ParameterName, param.Units, param.Data.AsString()}
+		err := writer.Write(line)
+		if err != nil {
+			log.Fatal("Error Writing log file:", err)
+		}
+	}
+	select {
+	case <-gsLogger.ticker.C:
+		writer.Flush()
+	default:
+	}
+}
+
+func New() (*Gslogger, chan<- gstypes.PacketStoreElement) {
 	dataChan := make(chan gstypes.PacketStoreElement, 512)
+	signalChan := make(chan bool)
 	gslogger := &Gslogger{
-		DataChan:dataChan,
-		doRun:false,
-		IsRunning:false,
-		ticker:time.NewTicker(10 * time.Second)}
-	return gslogger,dataChan
+		DataChan:   dataChan,
+		doRun:      false,
+		IsRunning:  false,
+		signalChan: signalChan,
+		ticker:     time.NewTicker(10 * time.Second)}
+	return gslogger, dataChan
 }

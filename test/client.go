@@ -1,12 +1,11 @@
 package main
 
 import (
-
-	"log"
-	"google.golang.org/grpc"
-	"rloop/Go-Ground-Station/proto"
 	"context"
 	"fmt"
+	"google.golang.org/grpc"
+	"log"
+	"rloop/Go-Ground-Station/proto"
 )
 
 func main() {
@@ -22,7 +21,7 @@ func main() {
 
 	stream, err := client.StreamPackets(context.Background(), &proto.StreamRequest{})
 
-	if err == nil{
+	if err == nil {
 		for {
 			_, err := stream.Recv()
 			if err == nil {
@@ -30,9 +29,8 @@ func main() {
 				count++
 			}
 		}
-	}else{
+	} else {
 		fmt.Println(err)
 	}
-
 
 }

@@ -37,18 +37,18 @@ type PacketDAQ struct {
 }
 
 type PacketStoreElement struct {
-	PacketName string
-	PacketType int
+	PacketName      string
+	PacketType      int
 	ParameterPrefix string
-	Port int
-	RxTime int64
-	Parameters []DataStoreElement
+	Port            int
+	RxTime          int64
+	Parameters      []DataStoreElement
 }
 
 type DataStoreElement struct {
 	ParameterName string
-	Units string
-	Data DataStoreUnit
+	Units         string
+	Data          DataStoreUnit
 }
 
 type DataStoreUnit struct {
@@ -66,52 +66,55 @@ type DataStoreUnit struct {
 }
 
 type RealTimeDataStoreUnit struct {
-	RxTime int64
-	IsStale bool
-	Units string
-	ValueIndex int
-	Int64Value int64
-	Uint64Value uint64
+	RxTime       int64
+	IsStale      bool
+	Units        string
+	ValueIndex   int
+	Int64Value   int64
+	Uint64Value  uint64
 	Float64Value float64
 }
 
 type RealTimeStreamElement struct {
-	PacketName string
+	PacketName    string
 	ParameterName string
-	Data RealTimeDataStoreUnit
+	Data          RealTimeDataStoreUnit
 }
 
-type RealTimeDataBundle struct{
+type RealTimeDataBundle struct {
 	Data []RealTimeStreamElement
 }
 
 type Command struct {
-	Node string
+	Node       string
 	PacketType int32
-	Data []byte
+	Data       []byte
 }
 
 type ReceiversCoordination struct {
 	Call chan bool
-	Ack chan bool
+	Ack  chan bool
 	Done chan bool
 }
 
 type ServiceStatus struct {
-	DataStoreMutex sync.RWMutex
+	TimeMutex   sync.RWMutex
+	LastUpdated int64
+
+	DataStoreMutex          sync.RWMutex
 	DataStoreManagerRunning bool
 
-	GRPCMutex sync.RWMutex
+	GRPCMutex         sync.RWMutex
 	GRPCServerRunning bool
 
-	BroadcasterMutex sync.RWMutex
+	BroadcasterMutex   sync.RWMutex
 	BroadcasterRunning bool
 
-	GSLoggerMutex sync.RWMutex
+	GSLoggerMutex   sync.RWMutex
 	GSLoggerRunning bool
 
 	PortsListeningMutex sync.RWMutex
-	PortsListening map[int]bool
+	PortsListening      map[int]bool
 }
 
 type Config struct {
@@ -119,25 +122,26 @@ type Config struct {
 }
 
 type Networking struct {
-	HostsToListen []Host `json:HostsToListen`
+	HostsToListen  []Host `json:HostsToListen`
 	HostsToCommand []Host `json:HostsToCommand`
-	Grpc int `json:Grpc`
-	WithSim bool `json:WithSim`
+	Grpc           int    `json:Grpc`
+	PySim          string `json:PySim`
+	WithSim        bool   `json:WithSim`
 }
 
 type Host struct {
-	Ip string `json:Ip`
-	Port int `json:Port`
+	Ip   string `json:Ip`
+	Port int    `json:Port`
 	Name string `json:Name`
 }
 
 func NewServiceStatus() ServiceStatus {
 	serviceStatus := ServiceStatus{
+		LastUpdated:             0,
 		DataStoreManagerRunning: false,
-		GRPCServerRunning:true,
-		BroadcasterRunning:false,
-		GSLoggerRunning:false,
-		PortsListening: map[int]bool{}}
+		GRPCServerRunning:       true,
+		BroadcasterRunning:      false,
+		GSLoggerRunning:         false,
+		PortsListening:          map[int]bool{}}
 	return serviceStatus
 }
-

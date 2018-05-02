@@ -1,8 +1,8 @@
 package constants
 
-import(
-	"rloop/Go-Ground-Station/gstypes"
+import (
 	"go/types"
+	"rloop/Go-Ground-Station/gstypes"
 )
 
 var (

@@ -1,15 +1,15 @@
 package server
 
 import (
-	"rloop/Go-Ground-Station/logging"
-	"rloop/Go-Ground-Station/datastore"
-	"rloop/Go-Ground-Station/proto"
+	"fmt"
 	"google.golang.org/grpc"
 	"net"
-	"fmt"
+	"rloop/Go-Ground-Station/datastore"
+	"rloop/Go-Ground-Station/gstypes"
+	"rloop/Go-Ground-Station/logging"
+	"rloop/Go-Ground-Station/proto"
 	"sync"
 	"time"
-	"rloop/Go-Ground-Station/gstypes"
 )
 
 type ServiceManager struct {
@@ -21,14 +21,14 @@ type ServiceManager struct {
 	udpListenerServers []*UDPListenerServer
 	udpBroadcaster     *UDPBroadcasterServer
 	gsLogger           *logging.Gslogger
-	simController *SimController
+	simController      *SimController
 	grpcConn           net.Listener
 	serviceCheckTicker *time.Ticker
-	StatusMutex sync.RWMutex
-	Status gstypes.ServiceStatus
+	StatusMutex        sync.RWMutex
+	Status             gstypes.ServiceStatus
 }
 
-func (manager *ServiceManager) GetStatus() gstypes.ServiceStatus{
+func (manager *ServiceManager) GetStatus() gstypes.ServiceStatus {
 	manager.StatusMutex.RLock()
 	defer manager.StatusMutex.RUnlock()
 	return manager.Status
@@ -60,8 +60,8 @@ func (manager *ServiceManager) SetSimController(simController *SimController) {
 }
 
 func (manager *ServiceManager) RunAll() {
-	fmt.Println("startlogger")
-	manager.StartLogger()
+	//fmt.Println("startlogger")
+	//manager.StartLogger()
 	fmt.Println("startdatastore")
 	manager.StartDatastoreManager()
 	fmt.Println("startudplisteners")
@@ -93,10 +93,10 @@ func (manager *ServiceManager) StartUDPListeners() {
 func (manager *ServiceManager) StopUDPListeners() {}
 
 func (manager *ServiceManager) StartDatastoreManager() { manager.dataStoreManager.Start() }
-func (manager *ServiceManager) StopDatastoreManager() {	manager.dataStoreManager.Stop() }
+func (manager *ServiceManager) StopDatastoreManager()  { manager.dataStoreManager.Stop() }
 
-func (manager *ServiceManager) StartBroadcaster() {	go manager.udpBroadcaster.Run() }
-func (manager *ServiceManager) StopBroadcaster() { manager.udpBroadcaster.Stop() }
+func (manager *ServiceManager) StartBroadcaster() { go manager.udpBroadcaster.Run() }
+func (manager *ServiceManager) StopBroadcaster()  { manager.udpBroadcaster.Stop() }
 
 func (manager *ServiceManager) StartGrpcServer() {
 	if manager.gRPCServer != nil {
@@ -105,7 +105,8 @@ func (manager *ServiceManager) StartGrpcServer() {
 		fmt.Println("cannot start grpc service, server is not set")
 	}
 }
-func (manager *ServiceManager) StopGrpcServer() {}
+
+func (manager *ServiceManager) StopGrpcServer() { manager.gRPCServer.Stop() }
 
 func (manager *ServiceManager) StartLogger() {
 	if !manager.gsLogger.IsRunning {
@@ -114,14 +115,14 @@ func (manager *ServiceManager) StartLogger() {
 }
 func (manager *ServiceManager) StopLogger() { manager.gsLogger.Stop() }
 
-func (manager *ServiceManager) StartSimController() {manager.simController.Run()}
+func (manager *ServiceManager) StartSimController() { manager.simController.Run() }
 
-func (manager *ServiceManager) StopSimController() {manager.simController.Stop()}
+func (manager *ServiceManager) StopSimController() { manager.simController.Stop() }
 
 func (manager *ServiceManager) Run() {
 	manager.doRun = true
 	for {
-		if (!manager.doRun) {
+		if !manager.doRun {
 			break
 		}
 		control := <-manager.serviceChan
@@ -133,8 +134,13 @@ func (manager *ServiceManager) checkStatus() {
 	//fmt.Println("statuschecker running")
 	for t := range manager.serviceCheckTicker.C {
 		manager.StatusMutex.Lock()
-		fmt.Printf("status on %d \n",t.Unix())
-		//fmt.Printf("%v \n",manager.Status)
+		//fmt.Printf("status on %d \n", t.Unix())
+		//sstring := fmt.Sprintf("GSLogger is running: %t \n" +
+		//	"Broadcaster is running: %t \n" +
+		//		"DataStoreManager is running: %t \n" +
+		//			"Grpc is running: %t \n", manager.Status.GSLoggerRunning, manager.Status.BroadcasterRunning, manager.Status.DataStoreManagerRunning, manager.Status.GRPCServerRunning )
+		//fmt.Printf("%s \n",sstring)
+		manager.Status.LastUpdated = t.Unix()
 		manager.Status.BroadcasterRunning = manager.udpBroadcaster.isRunning
 		manager.Status.DataStoreManagerRunning = manager.dataStoreManager.IsRunning
 		//manager.Status.GRPCServerRunning = manager.gRPCServer.IsRunning
@@ -176,12 +182,12 @@ func (manager *ServiceManager) Stop() {
 func NewServiceManager() (*ServiceManager, chan<- *proto.ServerControl) {
 	srvcChan := make(chan *proto.ServerControl, 8)
 	serviceManager := &ServiceManager{
-		serviceChan: srvcChan,
-		isRunning:   false,
-		doRun:       false,
-		serviceCheckTicker: time.NewTicker(time.Second*5),
-		StatusMutex: sync.RWMutex{},
-		Status: gstypes.NewServiceStatus()}
+		serviceChan:        srvcChan,
+		isRunning:          false,
+		doRun:              false,
+		serviceCheckTicker: time.NewTicker(time.Second * 5),
+		StatusMutex:        sync.RWMutex{},
+		Status:             gstypes.NewServiceStatus()}
 
 	return serviceManager, srvcChan
 }

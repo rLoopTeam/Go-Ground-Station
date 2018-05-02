@@ -37,14 +37,16 @@ message SimCommand {
     enum SimCommandEnum {
         StartSimulator = 0;
         PauseSimulator = 1;
-        ResumeSimulator = 2;
-        StopSimulator = 3;
+        //ResumeSimulator = 2;
+        StopSimulator = 2;
+        StartPush = 3;
     }
     SimCommandEnum Command = 1;
 }
 
 message Ack {
-    bool CommandExecuted = 1;
+    bool Success = 1;
+    string Message = 2;
 }
 
 message ServerStatus {
