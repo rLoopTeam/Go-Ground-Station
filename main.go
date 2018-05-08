@@ -14,7 +14,6 @@ import (
 	"rloop/Go-Ground-Station/gstypes"
 	"rloop/Go-Ground-Station/helpers"
 	"rloop/Go-Ground-Station/logging"
-	"rloop/Go-Ground-Station/proto"
 	"rloop/Go-Ground-Station/server"
 	"strconv"
 )
