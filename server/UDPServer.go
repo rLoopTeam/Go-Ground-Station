@@ -9,6 +9,7 @@ import (
 	"rloop/Go-Ground-Station/parsing"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type GSUDPServer interface {
@@ -17,7 +18,9 @@ type GSUDPServer interface {
 
 type UDPBroadcasterServer struct {
 	hosts          []gstypes.Host
+	isRunningMutex sync.RWMutex
 	isRunning      bool
+	doRunMutex     sync.RWMutex
 	doRun          bool
 	signalChannel  chan bool
 	commandChannel <-chan gstypes.Command
@@ -163,18 +166,18 @@ BroadCastLoop:
 			goto Broadcast
 		}
 		/*
-		select {
-		case <-srv.signalChannel:
-			fmt.Println("Broadcaster Stop")
-			break BroadCastLoop
-		default:
-		}
-		select {
-		case cmd = <-srv.commandChannel:
-			fmt.Println("received request for command broadcast")
-			goto Broadcast
-			default: continue
-		}
+			select {
+			case <-srv.signalChannel:
+				fmt.Println("Broadcaster Stop")
+				break BroadCastLoop
+			default:
+			}
+			select {
+			case cmd = <-srv.commandChannel:
+				fmt.Println("received request for command broadcast")
+				goto Broadcast
+				default: continue
+			}
 		*/
 	Broadcast:
 		var connErr error
@@ -208,6 +211,16 @@ BroadCastLoop:
 		conn.Close()
 	}
 	srv.isRunning = false
+}
+
+func (srv *UDPBroadcasterServer) GetStatus() (bool, bool) {
+	defer func() {
+		srv.isRunningMutex.RUnlock()
+		srv.doRunMutex.RUnlock()
+	}()
+	srv.isRunningMutex.RLock()
+	srv.doRunMutex.RLock()
+	return srv.isRunning, srv.doRun
 }
 
 func serialize(cmd gstypes.Command) ([]byte, error) {
@@ -246,10 +259,10 @@ func CreateNewUDPListenerServers(channel chan<- gstypes.PacketStoreElement, logg
 }
 
 func CreateNewUDPCommandServer(hosts []gstypes.Host) (*UDPBroadcasterServer, chan<- gstypes.Command) {
-	signalChannel:= make(chan bool)
+	signalChannel := make(chan bool)
 	commandChannel := make(chan gstypes.Command, 4)
 	srv := &UDPBroadcasterServer{
-		signalChannel: signalChannel,
+		signalChannel:  signalChannel,
 		hosts:          hosts,
 		commandChannel: commandChannel,
 		isRunning:      false,

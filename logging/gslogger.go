@@ -7,15 +7,18 @@ import (
 	"os"
 	"rloop/Go-Ground-Station/gstypes"
 	"strconv"
+	"sync"
 	"time"
 )
 
 type Gslogger struct {
-	ticker     *time.Ticker
-	DataChan   <-chan gstypes.PacketStoreElement
-	signalChan chan bool
-	doRun      bool
-	IsRunning  bool
+	ticker         *time.Ticker
+	DataChan       <-chan gstypes.PacketStoreElement
+	signalChan     chan bool
+	doRunMutex     sync.RWMutex
+	doRun          bool
+	isRunningMutex sync.RWMutex
+	isRunning      bool
 }
 
 func (gslogger *Gslogger) Start() {
@@ -24,7 +27,7 @@ func (gslogger *Gslogger) Start() {
 }
 
 func (gslogger *Gslogger) Stop() {
-	if gslogger.IsRunning {
+	if gslogger.isRunning {
 		gslogger.signalChan <- true
 		gslogger.doRun = false
 	}
@@ -50,7 +53,7 @@ func (gslogger *Gslogger) run() {
 
 	writer := csv.NewWriter(file)
 	writer.Write(headers)
-	gslogger.IsRunning = true
+	gslogger.isRunning = true
 MainLoop:
 	for {
 		select {
@@ -60,7 +63,7 @@ MainLoop:
 			break MainLoop
 		}
 	}
-	gslogger.IsRunning = false
+	gslogger.isRunning = false
 }
 
 func (gsLogger *Gslogger) write(data gstypes.PacketStoreElement, writer *csv.Writer) {
@@ -84,13 +87,23 @@ func (gsLogger *Gslogger) write(data gstypes.PacketStoreElement, writer *csv.Wri
 	}
 }
 
+func (gsLogger *Gslogger) GetStatus() (bool, bool) {
+	defer func() {
+		gsLogger.isRunningMutex.RUnlock()
+		gsLogger.doRunMutex.RUnlock()
+	}()
+	gsLogger.isRunningMutex.RLock()
+	gsLogger.doRunMutex.RLock()
+	return gsLogger.isRunning, gsLogger.doRun
+}
+
 func New() (*Gslogger, chan<- gstypes.PacketStoreElement) {
 	dataChan := make(chan gstypes.PacketStoreElement, 512)
 	signalChan := make(chan bool)
 	gslogger := &Gslogger{
 		DataChan:   dataChan,
 		doRun:      false,
-		IsRunning:  false,
+		isRunning:  false,
 		signalChan: signalChan,
 		ticker:     time.NewTicker(10 * time.Second)}
 	return gslogger, dataChan

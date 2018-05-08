@@ -16,7 +16,6 @@ import (
 	"rloop/Go-Ground-Station/logging"
 	"rloop/Go-Ground-Station/proto"
 	"rloop/Go-Ground-Station/server"
-	"rloop/Go-Ground-Station/simproto"
 	"strconv"
 )
 
@@ -49,8 +48,8 @@ func main() {
 	var grpcServer *grpc.Server
 
 	//channels
-	var serviceChannel chan<- *proto.ServerControl
-	var simCommandChannel chan<- *simproto.SimCommand
+	var serviceChannel chan<- gstypes.ServerControlWithTimeout
+	var simCommandChannel chan<- *gstypes.SimulatorCommandWithResponse
 	var loggerChannel chan<- gstypes.PacketStoreElement
 	var grpcChannelsHolder *gsgrpc.ChannelsHolder
 	var dataStoreChannel chan<- gstypes.PacketStoreElement

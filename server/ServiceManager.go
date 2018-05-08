@@ -7,13 +7,12 @@ import (
 	"rloop/Go-Ground-Station/datastore"
 	"rloop/Go-Ground-Station/gstypes"
 	"rloop/Go-Ground-Station/logging"
-	"rloop/Go-Ground-Station/proto"
 	"sync"
 	"time"
 )
 
 type ServiceManager struct {
-	serviceChan        <-chan *proto.ServerControl
+	serviceChan        <-chan gstypes.ServerControlWithTimeout
 	isRunning          bool
 	doRun              bool
 	dataStoreManager   *datastore.DataStoreManager
@@ -109,7 +108,8 @@ func (manager *ServiceManager) StartGrpcServer() {
 func (manager *ServiceManager) StopGrpcServer() { manager.gRPCServer.Stop() }
 
 func (manager *ServiceManager) StartLogger() {
-	if !manager.gsLogger.IsRunning {
+	isRunning, _ := manager.gsLogger.GetStatus()
+	if !isRunning {
 		go manager.gsLogger.Start()
 	}
 }
@@ -126,8 +126,8 @@ func (manager *ServiceManager) Run() {
 			break
 		}
 		control := <-manager.serviceChan
-		fmt.Printf("Service Control requested: %v \n", control.Command)
-		manager.executeControl(control)
+		fmt.Printf("Service Control requested: %v \n", control.Control)
+		manager.executeControl(control.Control)
 	}
 }
 
@@ -142,10 +142,9 @@ func (manager *ServiceManager) checkStatus() {
 		//			"Grpc is running: %t \n", manager.Status.GSLoggerRunning, manager.Status.BroadcasterRunning, manager.Status.DataStoreManagerRunning, manager.Status.GRPCServerRunning )
 		//fmt.Printf("%s \n",sstring)
 		manager.Status.LastUpdated = t.Unix()
-		manager.Status.BroadcasterRunning = manager.udpBroadcaster.isRunning
-		manager.Status.DataStoreManagerRunning = manager.dataStoreManager.IsRunning
-		//manager.Status.GRPCServerRunning = manager.gRPCServer.IsRunning
-		manager.Status.GSLoggerRunning = manager.gsLogger.IsRunning
+		manager.Status.BroadcasterRunning, _ = manager.udpBroadcaster.GetStatus()
+		manager.Status.DataStoreManagerRunning, _ = manager.dataStoreManager.GetStatus()
+		manager.Status.GSLoggerRunning, _ = manager.gsLogger.GetStatus()
 		for _, srv := range manager.udpListenerServers {
 			manager.Status.PortsListening[srv.ServerPort] = srv.IsRunning
 		}
@@ -153,35 +152,37 @@ func (manager *ServiceManager) checkStatus() {
 	}
 }
 
-func (manager *ServiceManager) executeControl(control *proto.ServerControl) {
-	switch control.Command {
-	case proto.ServerControl_LogServiceStart:
+func (manager *ServiceManager) executeControl(control gstypes.ServerControl_CommandEnum) bool {
+	var result bool = false
+	switch control {
+	case gstypes.ServerControl_LogServiceStart:
 		manager.StartLogger()
 		break
-	case proto.ServerControl_LogServiceStop:
+	case gstypes.ServerControl_LogServiceStop:
 		manager.StopLogger()
 		break
-	case proto.ServerControl_DataStoreManagerStart:
+	case gstypes.ServerControl_DataStoreManagerStart:
 		manager.StartDatastoreManager()
 		break
-	case proto.ServerControl_DataStoreManagerStop:
+	case gstypes.ServerControl_DataStoreManagerStop:
 		manager.StopDatastoreManager()
 		break
-	case proto.ServerControl_BroadcasterStart:
+	case gstypes.ServerControl_BroadcasterStart:
 		manager.StartBroadcaster()
 		break
-	case proto.ServerControl_BroadcasterStop:
+	case gstypes.ServerControl_BroadcasterStop:
 		manager.StopBroadcaster()
 		break
 	}
+	return result
 }
 
 func (manager *ServiceManager) Stop() {
 	manager.doRun = false
 }
 
-func NewServiceManager() (*ServiceManager, chan<- *proto.ServerControl) {
-	srvcChan := make(chan *proto.ServerControl, 8)
+func NewServiceManager() (*ServiceManager, chan<- gstypes.ServerControlWithTimeout) {
+	srvcChan := make(chan gstypes.ServerControlWithTimeout, 8)
 	serviceManager := &ServiceManager{
 		serviceChan:        srvcChan,
 		isRunning:          false,

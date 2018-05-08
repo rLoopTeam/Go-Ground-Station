@@ -1,7 +1,9 @@
 package gstypes
 
 import (
+	"context"
 	"go/types"
+	"rloop/Go-Ground-Station/proto"
 	"sync"
 )
 
@@ -134,6 +136,38 @@ type Host struct {
 	Port int    `json:Port`
 	Name string `json:Name`
 }
+
+type ServerControlWithTimeout struct {
+	Ctx          context.Context
+	ResponseChan chan<- Ack
+	Control      ServerControl_CommandEnum
+}
+
+type SimulatorConfigWithResponse struct {
+	Config       *proto.SimParameterBundle
+	ResponseChan chan *proto.Ack
+}
+
+type SimulatorCommandWithResponse struct {
+	Command *proto.SimCommand
+	ResponseChan chan *proto.Ack
+}
+
+type Ack struct {
+	Success bool
+	Message string
+}
+
+type ServerControl_CommandEnum int32
+
+const (
+	ServerControl_LogServiceStart       ServerControl_CommandEnum = 0
+	ServerControl_LogServiceStop        ServerControl_CommandEnum = 1
+	ServerControl_DataStoreManagerStart ServerControl_CommandEnum = 2
+	ServerControl_DataStoreManagerStop  ServerControl_CommandEnum = 3
+	ServerControl_BroadcasterStart      ServerControl_CommandEnum = 4
+	ServerControl_BroadcasterStop       ServerControl_CommandEnum = 5
+)
 
 func NewServiceStatus() ServiceStatus {
 	serviceStatus := ServiceStatus{

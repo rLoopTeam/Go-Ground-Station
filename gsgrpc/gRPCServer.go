@@ -10,15 +10,16 @@ import (
 	"rloop/Go-Ground-Station/gstypes"
 	"rloop/Go-Ground-Station/helpers"
 	"rloop/Go-Ground-Station/proto"
-	"rloop/Go-Ground-Station/simproto"
 	"strconv"
 	"sync"
+	//"time"
 )
 
 type GRPCServer struct {
-	serviceChan            chan<- *proto.ServerControl
+	serviceChan            chan<- gstypes.ServerControlWithTimeout
 	commandChannel         chan<- gstypes.Command
-	simCommandChannel      chan<- *simproto.SimCommand
+	simCommandChannel      chan<- *gstypes.SimulatorCommandWithResponse
+	simConfigChannel       chan<- *gstypes.SimulatorConfigWithResponse
 	receiversChannelHolder *ChannelsHolder
 	statusProvider         StatusProvider
 }
@@ -148,20 +149,57 @@ returnStatement:
 }
 
 func (srv *GRPCServer) ControlServer(ctx context.Context, control *proto.ServerControl) (*proto.Ack, error) {
-	srv.serviceChan <- control
-	return &proto.Ack{}, nil
+	//ctxTimeout, _ := context.WithTimeout(ctx,time.Second*3)
+	var response gstypes.Ack
+	var ret *proto.Ack
+	comm := make(chan gstypes.Ack)
+	controlStruct := gstypes.ServerControlWithTimeout{
+		Control:      gstypes.ServerControl_CommandEnum(control.Command),
+		ResponseChan: comm,
+		Ctx:          ctx}
+	srv.serviceChan <- controlStruct
+
+	select {
+	case <-ctx.Done():
+		fmt.Printf("context done: %v \n", ctx.Err())
+	case response = <-comm:
+		ret.Success = response.Success
+		ret.Message = response.Message
+	}
+	return ret, nil
 }
 
 func (srv *GRPCServer) SendSimCommand(ctx context.Context, command *proto.SimCommand) (*proto.Ack, error) {
-	var convertedValue simproto.SimCommand_SimCommandEnum
-	fmt.Printf("request for sim command: %v \n", command.Command)
-	simCommand := &simproto.SimCommand{}
-	cmdName := command.Command.String()
-	cmdValue := simproto.SimCommand_SimCommandEnum_value[cmdName]
-	convertedValue = simproto.SimCommand_SimCommandEnum(cmdValue)
-	simCommand.Command = convertedValue
-	srv.simCommandChannel <- simCommand
-	return &proto.Ack{}, nil
+	var err error
+	var ack *proto.Ack
+	var req *gstypes.SimulatorCommandWithResponse
+	var responseChan chan *proto.Ack
+
+	responseChan = make(chan *proto.Ack)
+
+	req = &gstypes.SimulatorCommandWithResponse{
+		ResponseChan: responseChan,
+		Command:       command}
+
+	srv.simCommandChannel <- req
+	ack = <-responseChan
+	return ack, err
+}
+func (srv *GRPCServer) EditSimConfig(ctx context.Context, in *proto.SimParameterBundle) (*proto.Ack, error) {
+	var err error
+	var ack *proto.Ack
+	var req *gstypes.SimulatorConfigWithResponse
+	var responseChan chan *proto.Ack
+
+	responseChan = make(chan *proto.Ack)
+
+	req = &gstypes.SimulatorConfigWithResponse{
+		ResponseChan: responseChan,
+		Config:       in}
+
+	srv.simConfigChannel <- req
+	ack = <-responseChan
+	return ack, err
 }
 
 func (srv *GRPCServer) addChannelToDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle) {
@@ -200,7 +238,7 @@ func GetChannelsHolder() *ChannelsHolder {
 	return holder
 }
 
-func newGroundStationGrpcServer(grpcChannelsHolder *ChannelsHolder, commandChannel chan<- gstypes.Command, simCommandChannel chan<- *simproto.SimCommand, serviceChan chan<- *proto.ServerControl, statusProvider StatusProvider) *GRPCServer {
+func newGroundStationGrpcServer(grpcChannelsHolder *ChannelsHolder, commandChannel chan<- gstypes.Command, simCommandChannel chan<- *gstypes.SimulatorCommandWithResponse, serviceChan chan<- gstypes.ServerControlWithTimeout, statusProvider StatusProvider) *GRPCServer {
 	srv := &GRPCServer{
 		receiversChannelHolder: grpcChannelsHolder,
 		commandChannel:         commandChannel,
@@ -210,7 +248,7 @@ func newGroundStationGrpcServer(grpcChannelsHolder *ChannelsHolder, commandChann
 	return srv
 }
 
-func NewGoGrpcServer(port int, grpcChannelsHolder *ChannelsHolder, commandChannel chan<- gstypes.Command, simCommandChannel chan<- *simproto.SimCommand, serviceChan chan<- *proto.ServerControl, statusProvider StatusProvider) (net.Listener, *grpc.Server, error) {
+func NewGoGrpcServer(port int, grpcChannelsHolder *ChannelsHolder, commandChannel chan<- gstypes.Command, simCommandChannel chan<- *gstypes.SimulatorCommandWithResponse, serviceChan chan<- gstypes.ServerControlWithTimeout, statusProvider StatusProvider) (net.Listener, *grpc.Server, error) {
 	GSserver := newGroundStationGrpcServer(grpcChannelsHolder, commandChannel, simCommandChannel, serviceChan, statusProvider)
 	var err error
 	var grpcServer *grpc.Server

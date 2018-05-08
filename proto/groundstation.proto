@@ -7,6 +7,7 @@ service GroundStationService {
     rpc sendSimCommand (SimCommand) returns (Ack){}
     rpc ping (Ping) returns (Pong){}
     rpc controlServer (ServerControl) returns (Ack){}
+    rpc EditSimConfig (SimParameterBundle) returns (Ack) {}
 }
 
 message StreamRequest {}
@@ -92,4 +93,13 @@ message Value {
     int64 Int64Value = 2;
     uint64 Uint64Value = 3;
     double DoubleValue = 4;
+}
+
+message SimParameterBundle {
+    repeated SimParameter config = 1;
+}
+
+message SimParameter {
+    string Key = 1;
+    string Value = 2;
 }

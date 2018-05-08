@@ -5,6 +5,7 @@ service SimControl {
     rpc ControlSim(SimCommand) returns (Ack) {}
 	rpc InitSim(SimInit) returns (Ack) {}
 	rpc ControlPusher(PusherCommand) returns (Ack) {}
+	rpc EditConfig (Parameter) returns (Ack) {}
 }
 
 message SimCommand {
@@ -33,3 +34,8 @@ message PusherCommand {
 	}
 	PusherCommandEnum command = 1;
 }
+
+message Parameter {
+	repeated string config = 1;
+}
+

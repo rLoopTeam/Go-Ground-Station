@@ -11,7 +11,9 @@ import (
 )
 
 type DataStoreManager struct {
-	IsRunning              bool
+	isRunningMutex         sync.RWMutex
+	isRunning              bool
+	doRunMutex             sync.RWMutex
 	doRun                  bool
 	signalChannel          chan bool
 	checkerSignalChannel   chan bool
@@ -26,7 +28,7 @@ type DataStoreManager struct {
 
 func (manager *DataStoreManager) Start() {
 	manager.doRun = true
-	if !manager.IsRunning {
+	if !manager.isRunning {
 		fmt.Println("go run manager run")
 		go manager.run()
 		fmt.Println("go run checker")
@@ -36,14 +38,14 @@ func (manager *DataStoreManager) Start() {
 
 func (manager *DataStoreManager) Stop() {
 	manager.doRun = false
-	if manager.IsRunning {
+	if manager.isRunning {
 		manager.signalChannel <- true
 		manager.checkerSignalChannel <- true
 	}
 }
 
 func (manager *DataStoreManager) run() {
-	manager.IsRunning = true
+	manager.isRunning = true
 MainLoop:
 	for {
 		select {
@@ -56,7 +58,7 @@ MainLoop:
 		runtime.Gosched()
 	}
 	fmt.Println("datastoremanager isrunning = false")
-	manager.IsRunning = false
+	manager.isRunning = false
 }
 
 func (manager *DataStoreManager) checker() {
@@ -185,12 +187,12 @@ func (manager *DataStoreManager) saveToDataStore(dataBundle gstypes.RealTimeData
 func (manager *DataStoreManager) sendDataBundle(dataBundle gstypes.RealTimeDataBundle) {
 	//check if grpc wants to push a subscriber to the map
 	/*
-	select {
-	case <-manager.receiversChannelHolder.Coordinator.Call:
-		manager.receiversChannelHolder.Coordinator.Ack <- true
-		<-manager.receiversChannelHolder.Coordinator.Done
-	default:
-	}
+		select {
+		case <-manager.receiversChannelHolder.Coordinator.Call:
+			manager.receiversChannelHolder.Coordinator.Ack <- true
+			<-manager.receiversChannelHolder.Coordinator.Done
+		default:
+		}
 	*/
 	manager.receiversChannelHolder.ReceiverMutex.Lock()
 	//send the bundle to all subscribers
@@ -202,6 +204,16 @@ func (manager *DataStoreManager) sendDataBundle(dataBundle gstypes.RealTimeDataB
 		}
 	}
 	manager.receiversChannelHolder.ReceiverMutex.Unlock()
+}
+
+func (manager *DataStoreManager) GetStatus() (bool, bool) {
+	defer func() {
+		manager.isRunningMutex.RUnlock()
+		manager.doRunMutex.RUnlock()
+	}()
+	manager.isRunningMutex.RLock()
+	manager.doRunMutex.RLock()
+	return manager.isRunning, manager.doRun
 }
 
 func cleanJoin(prefix string, name string) string {
