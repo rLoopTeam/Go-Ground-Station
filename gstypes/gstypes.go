@@ -1,7 +1,9 @@
 package gstypes
 
 import (
+	"context"
 	"go/types"
+	"rloop/Go-Ground-Station/proto"
 	"sync"
 )
 
@@ -36,19 +38,24 @@ type PacketDAQ struct {
 	DataSize   int
 }
 
+// used by packetparser
 type PacketStoreElement struct {
-	PacketName string
-	PacketType int
+	PacketName      string
+	PacketType      int
 	ParameterPrefix string
-	Port int
-	RxTime int64
-	Parameters []DataStoreElement
+	Port            int
+	RxTime          int64
+	Parameters      []DataStoreElement
 }
 
 type DataStoreElement struct {
-	ParameterName string
-	Units string
-	Data DataStoreUnit
+	PacketName        string
+	FullParameterName string
+	ParameterName     string
+	RxTime            int64
+	IsStale           bool
+	Units             string
+	Data              DataStoreUnit
 }
 
 type DataStoreUnit struct {
@@ -65,53 +72,40 @@ type DataStoreUnit struct {
 	Float64Value float64
 }
 
-type RealTimeDataStoreUnit struct {
-	RxTime int64
-	IsStale bool
-	Units string
-	ValueIndex int
-	Int64Value int64
-	Uint64Value uint64
-	Float64Value float64
-}
-
-type RealTimeStreamElement struct {
-	PacketName string
-	ParameterName string
-	Data RealTimeDataStoreUnit
-}
-
-type RealTimeDataBundle struct{
-	Data []RealTimeStreamElement
+type DataStoreBundle struct {
+	Data []DataStoreElement
 }
 
 type Command struct {
-	Node string
+	Node       string
 	PacketType int32
-	Data []byte
+	Data       []byte
 }
 
 type ReceiversCoordination struct {
 	Call chan bool
-	Ack chan bool
+	Ack  chan bool
 	Done chan bool
 }
 
 type ServiceStatus struct {
-	DataStoreMutex sync.RWMutex
+	TimeMutex   sync.RWMutex
+	LastUpdated int64
+
+	DataStoreMutex          sync.RWMutex
 	DataStoreManagerRunning bool
 
-	GRPCMutex sync.RWMutex
+	GRPCMutex         sync.RWMutex
 	GRPCServerRunning bool
 
-	BroadcasterMutex sync.RWMutex
+	BroadcasterMutex   sync.RWMutex
 	BroadcasterRunning bool
 
-	GSLoggerMutex sync.RWMutex
+	GSLoggerMutex   sync.RWMutex
 	GSLoggerRunning bool
 
 	PortsListeningMutex sync.RWMutex
-	PortsListening map[int]bool
+	PortsListening      map[int]bool
 }
 
 type Config struct {
@@ -119,24 +113,58 @@ type Config struct {
 }
 
 type Networking struct {
-	HostsToListen []Host `json:HostsToListen`
+	HostsToListen  []Host `json:HostsToListen`
 	HostsToCommand []Host `json:HostsToCommand`
-	Grpc int `json:Grpc`
+	Grpc           int    `json:Grpc`
+	PySim          string `json:PySim`
+	WithSim        bool   `json:WithSim`
 }
 
 type Host struct {
-	Ip string `json:Ip`
-	Port int `json:Port`
+	Ip   string `json:Ip`
+	Port int    `json:Port`
 	Name string `json:Name`
 }
 
-func NewServiceStatus() ServiceStatus {
-	serviceStatus := ServiceStatus{
-		DataStoreManagerRunning: false,
-		GRPCServerRunning:true,
-		BroadcasterRunning:false,
-		GSLoggerRunning:false,
-		PortsListening: map[int]bool{}}
-	return serviceStatus
+type ServerControlWithTimeout struct {
+	Ctx          context.Context
+	ResponseChan chan<- Ack
+	Control      ServerControl_CommandEnum
 }
 
+type SimulatorInitWithResponse struct {
+	SimInit       *proto.SimInit
+	ResponseChan chan *proto.Ack
+}
+
+type SimulatorCommandWithResponse struct {
+	Command      *proto.SimCommand
+	ResponseChan chan *proto.Ack
+}
+
+type Ack struct {
+	Success bool
+	Message string
+}
+
+type ServerControl_CommandEnum int32
+
+const (
+	ServerControl_LogServiceStart       ServerControl_CommandEnum = 0
+	ServerControl_LogServiceStop        ServerControl_CommandEnum = 1
+	ServerControl_DataStoreManagerStart ServerControl_CommandEnum = 2
+	ServerControl_DataStoreManagerStop  ServerControl_CommandEnum = 3
+	ServerControl_BroadcasterStart      ServerControl_CommandEnum = 4
+	ServerControl_BroadcasterStop       ServerControl_CommandEnum = 5
+)
+
+func NewServiceStatus() ServiceStatus {
+	serviceStatus := ServiceStatus{
+		LastUpdated:             0,
+		DataStoreManagerRunning: false,
+		GRPCServerRunning:       true,
+		BroadcasterRunning:      false,
+		GSLoggerRunning:         false,
+		PortsListening:          map[int]bool{}}
+	return serviceStatus
+}
