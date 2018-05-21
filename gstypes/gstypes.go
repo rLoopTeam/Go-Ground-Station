@@ -38,6 +38,7 @@ type PacketDAQ struct {
 	DataSize   int
 }
 
+// used by packetparser
 type PacketStoreElement struct {
 	PacketName      string
 	PacketType      int
@@ -48,9 +49,13 @@ type PacketStoreElement struct {
 }
 
 type DataStoreElement struct {
-	ParameterName string
-	Units         string
-	Data          DataStoreUnit
+	PacketName        string
+	FullParameterName string
+	ParameterName     string
+	RxTime            int64
+	IsStale           bool
+	Units             string
+	Data              DataStoreUnit
 }
 
 type DataStoreUnit struct {
@@ -67,24 +72,8 @@ type DataStoreUnit struct {
 	Float64Value float64
 }
 
-type RealTimeDataStoreUnit struct {
-	RxTime       int64
-	IsStale      bool
-	Units        string
-	ValueIndex   int
-	Int64Value   int64
-	Uint64Value  uint64
-	Float64Value float64
-}
-
-type RealTimeStreamElement struct {
-	PacketName    string
-	ParameterName string
-	Data          RealTimeDataStoreUnit
-}
-
-type RealTimeDataBundle struct {
-	Data []RealTimeStreamElement
+type DataStoreBundle struct {
+	Data []DataStoreElement
 }
 
 type Command struct {
@@ -143,13 +132,13 @@ type ServerControlWithTimeout struct {
 	Control      ServerControl_CommandEnum
 }
 
-type SimulatorConfigWithResponse struct {
-	Config       *proto.SimParameterBundle
+type SimulatorInitWithResponse struct {
+	SimInit       *proto.SimInit
 	ResponseChan chan *proto.Ack
 }
 
 type SimulatorCommandWithResponse struct {
-	Command *proto.SimCommand
+	Command      *proto.SimCommand
 	ResponseChan chan *proto.Ack
 }
 

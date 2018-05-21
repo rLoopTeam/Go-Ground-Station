@@ -21,6 +21,7 @@ func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStor
 			value.Int8Value = val
 			value.ValueIndex = 1
 		}
+		break
 	case types.Int16:
 		var val int16
 		buf := bytes.NewReader(slice)
@@ -29,6 +30,7 @@ func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStor
 			value.Int16Value = val
 			value.ValueIndex = 2
 		}
+		break
 	case types.Int32:
 		var val int32
 		buf := bytes.NewReader(slice)
@@ -37,6 +39,7 @@ func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStor
 			value.Int32Value = val
 			value.ValueIndex = 3
 		}
+		break
 	case types.Int64:
 		var val int64
 		buf := bytes.NewReader(slice)
@@ -45,6 +48,7 @@ func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStor
 			value.Int64Value = val
 			value.ValueIndex = 4
 		}
+		break
 	case types.Uint8:
 		var val uint8
 		buf := bytes.NewReader(slice)
@@ -53,6 +57,7 @@ func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStor
 			value.Uint8Value = val
 			value.ValueIndex = 5
 		}
+		break
 	case types.Uint16:
 		var val uint16
 		buf := bytes.NewReader(slice)
@@ -61,6 +66,7 @@ func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStor
 			value.Uint16Value = val
 			value.ValueIndex = 6
 		}
+		break
 	case types.Uint32:
 		var val uint32
 		buf := bytes.NewReader(slice)
@@ -69,6 +75,7 @@ func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStor
 			value.Uint32Value = val
 			value.ValueIndex = 7
 		}
+		break
 	case types.Uint64:
 		var val uint64
 		buf := bytes.NewReader(slice)
@@ -77,6 +84,7 @@ func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStor
 			value.Uint64Value = val
 			value.ValueIndex = 8
 		}
+		break
 	case types.Float32:
 		var val float32
 		buf := bytes.NewReader(slice)
@@ -85,6 +93,7 @@ func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStor
 			value.FloatValue = val
 			value.ValueIndex = 9
 		}
+		break
 	case types.Float64:
 		var val float64
 		buf := bytes.NewReader(slice)
@@ -93,6 +102,7 @@ func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStor
 			value.Float64Value = val
 			value.ValueIndex = 10
 		}
+		break
 	}
 	return value, err
 }

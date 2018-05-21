@@ -19,17 +19,15 @@ type GRPCServer struct {
 	serviceChan            chan<- gstypes.ServerControlWithTimeout
 	commandChannel         chan<- gstypes.Command
 	simCommandChannel      chan<- *gstypes.SimulatorCommandWithResponse
-	simConfigChannel       chan<- *gstypes.SimulatorConfigWithResponse
+	simInitChannel       chan<- *gstypes.SimulatorInitWithResponse
 	receiversChannelHolder *ChannelsHolder
 	statusProvider         StatusProvider
 }
 
 type ChannelsHolder struct {
 	ReceiverMutex sync.Mutex
-	//struct that will prevent multiple operations on the channelholder at the same time, sort of mutex
-	Coordinator gstypes.ReceiversCoordination
 	//map that holds the channels to communicate with the grpc clients
-	Receivers map[*chan gstypes.RealTimeDataBundle]*chan gstypes.RealTimeDataBundle
+	Receivers map[*chan gstypes.DataStoreBundle]*chan gstypes.DataStoreBundle
 }
 
 func (srv *GRPCServer) Ping(context.Context, *proto.Ping) (*proto.Pong, error) {
@@ -54,32 +52,58 @@ func (srv *GRPCServer) Ping(context.Context, *proto.Ping) (*proto.Pong, error) {
 
 func (srv *GRPCServer) StreamPackets(req *proto.StreamRequest, stream proto.GroundStationService_StreamPacketsServer) error {
 	var err error
-	receiverChannel := make(chan gstypes.RealTimeDataBundle, 32)
+	var dataArrayLength int
+	var pushCurrentDataStoreElement bool
+	var requestedParameters map[string]struct{}
+	var dataStoreBundleLength int
+	receiverChannel := make(chan gstypes.DataStoreBundle, 32)
 	srv.addChannelToDatastoreQueue(receiverChannel)
 	fmt.Println("gsgrpc channel pushed to map")
-	for element := range receiverChannel {
+	dataArrayLength = len(req.Parameters)
+	if !req.All{
+		requestedParameters = map[string]struct{} {}
+		for _, p := range req.Parameters{
+			requestedParameters[p] = struct{}{}
+		}
+	}
+
+MainLoop:
+	for dataStoreBundle := range receiverChannel {
+
+		dataStoreBundleLength = len(dataStoreBundle.Data)
+		if req.All {
+			dataArrayLength = dataStoreBundleLength
+			pushCurrentDataStoreElement = true
+		}
 		dataBundle := proto.DataBundle{}
-		dataArray := make([]*proto.Params, len(element.Data))
-		for idx := 0; idx < len(element.Data); idx++ {
-			param := proto.Params{}
-			param.RxTime = element.Data[idx].Data.RxTime
-			param.ParamName = element.Data[idx].ParameterName
-			param.PacketName = element.Data[idx].PacketName
-			switch element.Data[idx].Data.ValueIndex {
-			case 1:
-				param.Value = &proto.Value{Index: 1, Int64Value: element.Data[idx].Data.Int64Value}
-			case 2:
-				param.Value = &proto.Value{Index: 2, Uint64Value: element.Data[idx].Data.Uint64Value}
-			case 3:
-				param.Value = &proto.Value{Index: 3, DoubleValue: element.Data[idx].Data.Float64Value}
+		dataArray := make([]*proto.Params, dataArrayLength)
+
+		for idx := 0; idx < dataStoreBundleLength; idx++ {
+			if !req.All {
+				_, pushCurrentDataStoreElement = requestedParameters[dataStoreBundle.Data[idx].FullParameterName]
 			}
-			dataArray[idx] = &param
+			if pushCurrentDataStoreElement {
+				param := proto.Params{}
+				param.RxTime = dataStoreBundle.Data[idx].RxTime
+				param.ParamName = dataStoreBundle.Data[idx].ParameterName
+				param.PacketName = dataStoreBundle.Data[idx].PacketName
+				switch dataStoreBundle.Data[idx].Data.ValueIndex {
+				case 4:
+					param.Value = &proto.Value{Index: 1, Int64Value: dataStoreBundle.Data[idx].Data.Int64Value}
+				case 8:
+					param.Value = &proto.Value{Index: 2, Uint64Value: dataStoreBundle.Data[idx].Data.Uint64Value}
+				case 10:
+					param.Value = &proto.Value{Index: 3, DoubleValue: dataStoreBundle.Data[idx].Data.Float64Value}
+				}
+				dataArray[idx] = &param
+			}
 		}
 		dataBundle.Parameters = dataArray
+		//error will occur when connection is closed; in which case we remove the channel as a receiver and exit the loop
 		err = stream.Send(&dataBundle)
 		if err != nil {
 			srv.removeChannelFromDatastoreQueue(receiverChannel)
-			break
+			break MainLoop
 		} else {
 			fmt.Println("sent data to frontend server")
 		}
@@ -88,16 +112,23 @@ func (srv *GRPCServer) StreamPackets(req *proto.StreamRequest, stream proto.Grou
 }
 
 func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*proto.Ack, error) {
-	ack := &proto.Ack{}
+	var ack *proto.Ack
 	//the message that will be delivered to the pod
 	var dataBytes []byte
 	//any error encountered will be pushed into this variable and returned immediately to the sender
 	var err error
 	//fmt.Printf("Request for command: %v\n", cmd)
-	node := cmd.Node
-	packetType := cmd.PacketType
-	data := cmd.Data
-	dataLength := len(data)
+	var node string
+	var packetType int32
+	var data []int32
+	var dataLength int
+	var command gstypes.Command
+
+	ack = &proto.Ack{}
+	node = cmd.Node
+	packetType = cmd.PacketType
+	data = cmd.Data
+	dataLength = len(data)
 
 	dataBytesArray := [][]byte{{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}
 
@@ -115,6 +146,8 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 		}
 	}
 	//if there's no data or not enough data populate the remaining byte slots with zero value
+	//not necessary action
+	/*
 	for idx := dataLength; idx < 4; idx++ {
 		var value int32 = 0
 		buf := new(bytes.Buffer)
@@ -127,6 +160,7 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 			dataBytesArray[idx] = buf.Bytes()
 		}
 	}
+	*/
 
 	dataBytes = helpers.AppendVariadic(dataBytesArray...)
 	/*
@@ -136,7 +170,7 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 	*/
 
 	if err == nil {
-		command := gstypes.Command{
+		command = gstypes.Command{
 			Node:       node,
 			PacketType: packetType,
 			Data:       dataBytes,
@@ -149,11 +183,13 @@ returnStatement:
 }
 
 func (srv *GRPCServer) ControlServer(ctx context.Context, control *proto.ServerControl) (*proto.Ack, error) {
-	//ctxTimeout, _ := context.WithTimeout(ctx,time.Second*3)
 	var response gstypes.Ack
 	var ret *proto.Ack
-	comm := make(chan gstypes.Ack)
-	controlStruct := gstypes.ServerControlWithTimeout{
+	var comm chan gstypes.Ack
+	var controlStruct gstypes.ServerControlWithTimeout
+
+	comm = make(chan gstypes.Ack)
+	controlStruct = gstypes.ServerControlWithTimeout{
 		Control:      gstypes.ServerControl_CommandEnum(control.Command),
 		ResponseChan: comm,
 		Ctx:          ctx}
@@ -179,88 +215,86 @@ func (srv *GRPCServer) SendSimCommand(ctx context.Context, command *proto.SimCom
 
 	req = &gstypes.SimulatorCommandWithResponse{
 		ResponseChan: responseChan,
-		Command:       command}
+		Command:      command}
 
 	srv.simCommandChannel <- req
 	ack = <-responseChan
 	return ack, err
 }
-func (srv *GRPCServer) EditSimConfig(ctx context.Context, in *proto.SimParameterBundle) (*proto.Ack, error) {
+func (srv *GRPCServer) InitSim(ctx context.Context, in *proto.SimInit) (*proto.Ack, error) {
 	var err error
 	var ack *proto.Ack
-	var req *gstypes.SimulatorConfigWithResponse
+	var req *gstypes.SimulatorInitWithResponse
 	var responseChan chan *proto.Ack
 
+	//fmt.Printf("request for new sim config: %v \n", in)
 	responseChan = make(chan *proto.Ack)
 
-	req = &gstypes.SimulatorConfigWithResponse{
+	req = &gstypes.SimulatorInitWithResponse{
 		ResponseChan: responseChan,
-		Config:       in}
+		SimInit:       in}
 
-	srv.simConfigChannel <- req
+	srv.simInitChannel <- req
 	ack = <-responseChan
 	return ack, err
 }
 
-func (srv *GRPCServer) addChannelToDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle) {
-	//srv.receiversChannelHolder.Coordinator.Call <- true
-	//<-srv.receiversChannelHolder.Coordinator.Ack
+func (srv *GRPCServer) RequestSimConfigList(context.Context, *proto.SimConfigListRequest) (*proto.SimConfigList, error) {
+	arr := []string{"test1", "test2"}
+	obj := &proto.SimConfigList{
+		ConfigNames: arr}
+
+	return obj, nil
+}
+
+func (srv *GRPCServer) addChannelToDatastoreQueue(receiverChannel chan gstypes.DataStoreBundle) {
 	srv.receiversChannelHolder.ReceiverMutex.Lock()
 	srv.receiversChannelHolder.Receivers[&receiverChannel] = &receiverChannel
 	srv.receiversChannelHolder.ReceiverMutex.Unlock()
-	//srv.receiversChannelHolder.Coordinator.Done <- true
 }
 
-func (srv *GRPCServer) removeChannelFromDatastoreQueue(receiverChannel chan gstypes.RealTimeDataBundle) {
-	//srv.receiversChannelHolder.Coordinator.Call <- true
-	//<-srv.receiversChannelHolder.Coordinator.Ack
+func (srv *GRPCServer) removeChannelFromDatastoreQueue(receiverChannel chan gstypes.DataStoreBundle) {
 	srv.receiversChannelHolder.ReceiverMutex.Lock()
 	delete(srv.receiversChannelHolder.Receivers, &receiverChannel)
 	fmt.Println("closing receiver channel")
 	srv.receiversChannelHolder.ReceiverMutex.Unlock()
-	//srv.receiversChannelHolder.Coordinator.Done <- true
 }
 
 func GetChannelsHolder() *ChannelsHolder {
-	callChannel := make(chan bool)
-	ackChannel := make(chan bool)
-	doneChannel := make(chan bool)
-	coordinator := gstypes.ReceiversCoordination{
-		Call: callChannel,
-		Ack:  ackChannel,
-		Done: doneChannel}
-
 	holder := &ChannelsHolder{
-		Coordinator:   coordinator,
 		ReceiverMutex: sync.Mutex{},
-		Receivers:     make(map[*chan gstypes.RealTimeDataBundle]*chan gstypes.RealTimeDataBundle),
+		Receivers:     make(map[*chan gstypes.DataStoreBundle]*chan gstypes.DataStoreBundle),
 	}
 	return holder
 }
 
-func newGroundStationGrpcServer(grpcChannelsHolder *ChannelsHolder, commandChannel chan<- gstypes.Command, simCommandChannel chan<- *gstypes.SimulatorCommandWithResponse, serviceChan chan<- gstypes.ServerControlWithTimeout, statusProvider StatusProvider) *GRPCServer {
+func newGroundStationGrpcServer(grpcChannelsHolder *ChannelsHolder, commandChannel chan<- gstypes.Command, simCommandChannel chan<- *gstypes.SimulatorCommandWithResponse, simInitChannel chan<- *gstypes.SimulatorInitWithResponse, serviceChan chan<- gstypes.ServerControlWithTimeout, statusProvider StatusProvider) *GRPCServer {
 	srv := &GRPCServer{
 		receiversChannelHolder: grpcChannelsHolder,
 		commandChannel:         commandChannel,
 		serviceChan:            serviceChan,
 		statusProvider:         statusProvider,
-		simCommandChannel:      simCommandChannel}
+		simCommandChannel:      simCommandChannel,
+		simInitChannel:       simInitChannel}
 	return srv
 }
 
-func NewGoGrpcServer(port int, grpcChannelsHolder *ChannelsHolder, commandChannel chan<- gstypes.Command, simCommandChannel chan<- *gstypes.SimulatorCommandWithResponse, serviceChan chan<- gstypes.ServerControlWithTimeout, statusProvider StatusProvider) (net.Listener, *grpc.Server, error) {
-	GSserver := newGroundStationGrpcServer(grpcChannelsHolder, commandChannel, simCommandChannel, serviceChan, statusProvider)
-	var err error
+func NewGoGrpcServer(port int, grpcChannelsHolder *ChannelsHolder, commandChannel chan<- gstypes.Command, simCommandChannel chan<- *gstypes.SimulatorCommandWithResponse, simInitChannel chan<- *gstypes.SimulatorInitWithResponse, serviceChan chan<- gstypes.ServerControlWithTimeout, statusProvider StatusProvider) (net.Listener, *grpc.Server, error) {
+	var GSServer *GRPCServer
 	var grpcServer *grpc.Server
+	var strPort string
+	var err error
+	var conn net.Listener
 
+	GSServer = newGroundStationGrpcServer(grpcChannelsHolder, commandChannel, simCommandChannel, simInitChannel, serviceChan, statusProvider)
 	//initialize grpcserver
-	strPort := ":" + strconv.Itoa(port)
-	conn, err := net.Listen("tcp", strPort)
+	strPort = ":" + strconv.Itoa(port)
+	conn, err = net.Listen("tcp", strPort)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	} else {
 		grpcServer = grpc.NewServer()
-		proto.RegisterGroundStationServiceServer(grpcServer, GSserver)
+		proto.RegisterGroundStationServiceServer(grpcServer, GSServer)
 	}
 
 	return conn, grpcServer, err

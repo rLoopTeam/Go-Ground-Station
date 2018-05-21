@@ -28,6 +28,7 @@ func ParsePacket(nodePort int, nodeName string, packet []byte, errcount *int) (g
 	payloadLengthInt := int(payloadLength)
 	//retrieve the definition of the packet
 	definition := constants.PacketDefinitions[packetType]
+	//fmt.Printf("packet type: %d, packet meta: %v \n", packetType,definition.MetaData)
 	//make crc check and if correct proceed to parsing
 	//TODO: fix crc
 	/*
@@ -129,6 +130,5 @@ func ParsePayload(definition gstypes.PacketDefinition, payloadLength int, port i
 	}
 
 	packetStoreElement.Parameters = dataStoreElementArray.GetSlice()
-	//packetStoreElement.Parameters = datastoreElementArray[:dataStoreElementIdx]
 	return packetStoreElement, parseError
 }

@@ -110,15 +110,22 @@ func (srv *UDPListenerServer) ProcessMessage(nodePort int, nodeName string, pack
 	defer func() {
 		if r := recover(); r != nil {
 			*errcount++
-			//fmt.Println("Problem with parsing packet in: ", r)
+			fmt.Printf("Problem with parsing packet on port %d in: %v \n", nodePort,r)
 			//fmt.Printf("errcount on nodeport %d: %d\n", nodePort,*errcount)
 		}
 	}()
 
 	element, err := parsing.ParsePacket(nodePort, nodeName, packet, errcount)
 	if err == nil {
-		srv.packetStoreChannel <- element
-		srv.loggerChan <- element
+		select {
+		case srv.packetStoreChannel <- element:
+		default:
+		}
+		select {
+		case srv.loggerChan <- element:
+		default:
+		}
+
 	} else {
 		fmt.Println(err)
 	}
@@ -152,8 +159,6 @@ func (srv *UDPBroadcasterServer) broadcast() {
 		nodesMap[node.Name] = strconv.Itoa(node.Port)
 	}
 
-	//fmt.Printf("hosts: %v", nodesMap)
-
 	srv.isRunning = true
 BroadCastLoop:
 	for {
@@ -162,23 +167,8 @@ BroadCastLoop:
 			fmt.Println("Broadcaster Stop")
 			break BroadCastLoop
 		case cmd = <-srv.commandChannel:
-			fmt.Println("received request for command broadcast")
 			goto Broadcast
 		}
-		/*
-			select {
-			case <-srv.signalChannel:
-				fmt.Println("Broadcaster Stop")
-				break BroadCastLoop
-			default:
-			}
-			select {
-			case cmd = <-srv.commandChannel:
-				fmt.Println("received request for command broadcast")
-				goto Broadcast
-				default: continue
-			}
-		*/
 	Broadcast:
 		var connErr error
 		//retrieve the next command from the channel

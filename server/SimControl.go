@@ -8,6 +8,7 @@ import (
 	"rloop/Go-Ground-Station/gstypes"
 	"rloop/Go-Ground-Station/proto"
 	"rloop/Go-Ground-Station/simproto"
+	"time"
 )
 
 type SimController struct {
@@ -17,7 +18,7 @@ type SimController struct {
 	client      simproto.SimControlClient
 	signalChan  chan bool
 	commandChan <-chan *gstypes.SimulatorCommandWithResponse
-	configChan  <-chan *gstypes.SimulatorConfigWithResponse
+	simInitChan  <-chan *gstypes.SimulatorInitWithResponse
 }
 
 func (client *SimController) Stop() {
@@ -37,12 +38,12 @@ func (client *SimController) Run() {
 MainLoop:
 	for {
 		select {
-		case param := <-client.configChan:
-			client.SendNewParams(param)
+		case param := <-client.simInitChan:
+			client.InitSim(param)
 			break
 		case cmd := <-client.commandChan:
 			client.SendCommand(cmd)
-		case <-client.signalChan:
+		case <-client.signalChan: //stopsignal
 			break MainLoop
 		}
 	}
@@ -50,13 +51,16 @@ MainLoop:
 	client.IsRunning = false
 }
 
-func (client *SimController) SendCommand(cmd *gstypes.SimulatorCommandWithResponse){
+func (client *SimController) SendCommand(cmd *gstypes.SimulatorCommandWithResponse) {
+	//will hold converted value from main proto to simulator proto
 	var convertedValue simproto.SimCommand_SimCommandEnum
 	var simCommand *simproto.SimCommand
 	var cmdName string
 	var cmdValue int32
 	var ack *simproto.Ack
 	var err error
+	var ctx context.Context
+	var cancel context.CancelFunc
 
 	rack := &proto.Ack{}
 	if client.conn == nil {
@@ -71,29 +75,39 @@ func (client *SimController) SendCommand(cmd *gstypes.SimulatorCommandWithRespon
 	cmdValue = simproto.SimCommand_SimCommandEnum_value[cmdName]
 	convertedValue = simproto.SimCommand_SimCommandEnum(cmdValue)
 	simCommand.Command = convertedValue
+	ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
-	ack, err = client.client.ControlSim(context.Background(), simCommand)
-	fmt.Printf("sending command: %v \n", cmd.Command)
+	fmt.Printf("sending command: %v \n", simCommand)
+	ack, err = client.client.ControlSim(ctx, simCommand)
+
 	if err != nil {
 		log.Printf("SimControl send failed: %v \n", err)
 		rack.Success = false
+	}else if ack == nil{
+		rack.Success = false
+		rack.Message = ctx.Err().Error()
 	} else {
 		rack.Success = ack.Success
 	}
-	fmt.Printf("Sim Controller Response: %s\n", ack.Message)
-	ResponseStatement:
+	fmt.Printf("Sim Controller Response: %s\n", rack.Message)
+ResponseStatement:
 	cmd.ResponseChan <- rack
 }
 
-func (controller *SimController) SendNewParams(strct *gstypes.SimulatorConfigWithResponse) {
+func (controller *SimController) InitSim(initWithResponse *gstypes.SimulatorInitWithResponse) {
 	var rack *proto.Ack
 	var ack *simproto.Ack
 	var err error
-	var parameters *simproto.Parameter
-	var parametersArr []string
-	var configLineFormat string
+	var simInitConfig *simproto.SimInit
+	var config_files_arr []string
+	var config_params_arr []*simproto.ConfigParameter
 
+	simInitConfig = &simproto.SimInit{}
 	rack = &proto.Ack{}
+	config_files_arr = make([]string, len(initWithResponse.SimInit.ConfigFiles))
+	config_params_arr = make([]*simproto.ConfigParameter, len(initWithResponse.SimInit.ConfigParams))
+
 	if controller.conn == nil {
 		log.Fatalf("Cannot send sim command: Connection is not set \n")
 		rack.Success = false
@@ -101,18 +115,21 @@ func (controller *SimController) SendNewParams(strct *gstypes.SimulatorConfigWit
 		goto ReturnStatement
 	}
 
-	parametersArr = make([]string, len(strct.Config.Config))
-
-	//the base format in which the parameters will be passed to the simulator
-	configLineFormat = "%s: [ %s ]"
-	for idx, p := range strct.Config.Config {
-		str := fmt.Sprintf(configLineFormat,p.Key, p.Value)
-		parametersArr[idx] = str
+	for idx, cfg := range initWithResponse.SimInit.ConfigFiles {
+		config_files_arr[idx] = cfg
 	}
 
-	parameters = &simproto.Parameter{Config: parametersArr}
+	for idx, cfg := range initWithResponse.SimInit.ConfigParams {
+		config_params_arr[idx] = &simproto.ConfigParameter{
+			ConfigPath:cfg.ConfigPath,
+			Value:cfg.Value}
+	}
 
-	ack, err = controller.client.EditConfig(context.Background(), parameters)
+	simInitConfig.ConfigParams = config_params_arr
+	simInitConfig.ConfigFiles = config_files_arr
+	simInitConfig.OutputDir = initWithResponse.SimInit.OutputDir
+
+	ack, err = controller.client.InitSim(context.Background(), simInitConfig)
 
 	if err != nil {
 		rack.Success = false
@@ -123,7 +140,7 @@ func (controller *SimController) SendNewParams(strct *gstypes.SimulatorConfigWit
 	}
 
 ReturnStatement:
-	strct.ResponseChan <- rack
+	initWithResponse.ResponseChan <- rack
 }
 
 func (client *SimController) Connect(address string) {
@@ -136,13 +153,15 @@ func (client *SimController) Connect(address string) {
 	}
 }
 
-func NewSimController() (*SimController, chan<- *gstypes.SimulatorCommandWithResponse) {
+func NewSimController() (*SimController, chan<- *gstypes.SimulatorCommandWithResponse, chan<- *gstypes.SimulatorInitWithResponse) {
 	signalCh := make(chan bool)
 	commandCh := make(chan *gstypes.SimulatorCommandWithResponse)
+	simInitCh := make(chan *gstypes.SimulatorInitWithResponse)
 	controller := &SimController{
 		signalChan:  signalCh,
 		commandChan: commandCh,
+		simInitChan:  simInitCh,
 		IsRunning:   false,
 		doRun:       false}
-	return controller, commandCh
+	return controller, commandCh, simInitCh
 }

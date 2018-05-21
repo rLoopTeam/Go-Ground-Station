@@ -115,7 +115,11 @@ func (manager *ServiceManager) StartLogger() {
 }
 func (manager *ServiceManager) StopLogger() { manager.gsLogger.Stop() }
 
-func (manager *ServiceManager) StartSimController() { manager.simController.Run() }
+func (manager *ServiceManager) StartSimController() {
+	if manager.simController != nil {
+		manager.simController.Run()
+	}
+}
 
 func (manager *ServiceManager) StopSimController() { manager.simController.Stop() }
 

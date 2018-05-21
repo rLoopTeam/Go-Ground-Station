@@ -7,10 +7,14 @@ service GroundStationService {
     rpc sendSimCommand (SimCommand) returns (Ack){}
     rpc ping (Ping) returns (Pong){}
     rpc controlServer (ServerControl) returns (Ack){}
-    rpc EditSimConfig (SimParameterBundle) returns (Ack) {}
+    rpc InitSim(SimInit) returns (Ack) {}
+    rpc RequestSimConfigList (SimConfigListRequest) returns (SimConfigList) {}
 }
 
-message StreamRequest {}
+message StreamRequest {
+    bool All = 1;
+    repeated string Parameters = 2;
+}
 
 message ServerControl{
     enum CommandEnum {
@@ -36,7 +40,7 @@ message Command {
 
 message SimCommand {
     enum SimCommandEnum {
-        StartSimulator = 0;
+        RunSimulator = 0;
         PauseSimulator = 1;
         //ResumeSimulator = 2;
         StopSimulator = 2;
@@ -95,11 +99,18 @@ message Value {
     double DoubleValue = 4;
 }
 
-message SimParameterBundle {
-    repeated SimParameter config = 1;
+message SimInit {
+    repeated string config_files = 1;
+    repeated ConfigParameter config_params = 2;
+    string output_dir = 3;
+}
+message ConfigParameter {
+    string config_path = 1;
+    string value = 2;
 }
 
-message SimParameter {
-    string Key = 1;
-    string Value = 2;
+message SimConfigListRequest{}
+
+message SimConfigList {
+    repeated string configNames = 1;
 }

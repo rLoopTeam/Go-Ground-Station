@@ -49,6 +49,7 @@ func main() {
 	//channels
 	var serviceChannel chan<- gstypes.ServerControlWithTimeout
 	var simCommandChannel chan<- *gstypes.SimulatorCommandWithResponse
+	var simInitChannel chan<- *gstypes.SimulatorInitWithResponse
 	var loggerChannel chan<- gstypes.PacketStoreElement
 	var grpcChannelsHolder *gsgrpc.ChannelsHolder
 	var dataStoreChannel chan<- gstypes.PacketStoreElement
@@ -94,7 +95,7 @@ func main() {
 	serviceManager, serviceChannel = server.NewServiceManager()
 
 	if networkConfig.WithSim && networkConfig.PySim != "" {
-		simController, simCommandChannel = server.NewSimController()
+		simController, simCommandChannel, simInitChannel = server.NewSimController()
 		simController.Connect(networkConfig.PySim)
 		serviceManager.SetSimController(simController)
 	}
@@ -109,7 +110,7 @@ func main() {
 	//Create the UDPListenerServers that will listen to the packets sent by the rpod
 	udpListenerServers = server.CreateNewUDPListenerServers(dataStoreChannel, loggerChannel, nodesPorts, nodesMap)
 	//Create the gsgrpc stream server
-	grpcConn, grpcServer, grpcError = gsgrpc.NewGoGrpcServer(GrpcPort, grpcChannelsHolder, commandChannel, simCommandChannel, serviceChannel, serviceManager)
+	grpcConn, grpcServer, grpcError = gsgrpc.NewGoGrpcServer(GrpcPort, grpcChannelsHolder, commandChannel, simCommandChannel, simInitChannel, serviceChannel, serviceManager)
 
 	serviceManager.SetDatastoreManager(dataStoreManager)
 	serviceManager.SetGsLogger(gsLogger)

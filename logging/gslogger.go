@@ -12,7 +12,7 @@ import (
 )
 
 type Gslogger struct {
-	ticker         *time.Ticker
+	//ticker         *time.Ticker
 	DataChan       <-chan gstypes.PacketStoreElement
 	signalChan     chan bool
 	doRunMutex     sync.RWMutex
@@ -80,11 +80,14 @@ func (gsLogger *Gslogger) write(data gstypes.PacketStoreElement, writer *csv.Wri
 			log.Fatal("Error Writing log file:", err)
 		}
 	}
-	select {
-	case <-gsLogger.ticker.C:
-		writer.Flush()
-	default:
-	}
+
+	// this is not necessary since the writer will use hte writestring method which calls Flush() already
+	/*
+		select {
+		case <-gsLogger.ticker.C:
+			writer.Flush()
+		default:
+		}*/
 }
 
 func (gsLogger *Gslogger) GetStatus() (bool, bool) {
@@ -105,6 +108,6 @@ func New() (*Gslogger, chan<- gstypes.PacketStoreElement) {
 		doRun:      false,
 		isRunning:  false,
 		signalChan: signalChan,
-		ticker:     time.NewTicker(10 * time.Second)}
+		/*ticker:     time.NewTicker(10 * time.Second)*/}
 	return gslogger, dataChan
 }
