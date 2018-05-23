@@ -56,9 +56,9 @@ func (srv *GRPCServer) StreamPackets(req *proto.StreamRequest, stream proto.Grou
 	var pushCurrentDataStoreElement bool
 	var requestedParameters map[string]struct{}
 	var dataStoreBundleLength int
+	var dataArrayIdx int
 	receiverChannel := make(chan gstypes.DataStoreBundle, 32)
 	srv.addChannelToDatastoreQueue(receiverChannel)
-	fmt.Println("gsgrpc channel pushed to map")
 	dataArrayLength = len(req.Parameters)
 	if !req.All{
 		requestedParameters = map[string]struct{} {}
@@ -77,15 +77,16 @@ MainLoop:
 		}
 		dataBundle := proto.DataBundle{}
 		dataArray := make([]*proto.Params, dataArrayLength)
-
+		dataArrayIdx = 0
 		for idx := 0; idx < dataStoreBundleLength; idx++ {
 			if !req.All {
 				_, pushCurrentDataStoreElement = requestedParameters[dataStoreBundle.Data[idx].FullParameterName]
 			}
+			//fmt.Printf("push to element: %v \n", pushCurrentDataStoreElement)
 			if pushCurrentDataStoreElement {
 				param := proto.Params{}
 				param.RxTime = dataStoreBundle.Data[idx].RxTime
-				param.ParamName = dataStoreBundle.Data[idx].ParameterName
+				param.ParamName = dataStoreBundle.Data[idx].FullParameterName
 				param.PacketName = dataStoreBundle.Data[idx].PacketName
 				switch dataStoreBundle.Data[idx].Data.ValueIndex {
 				case 4:
@@ -95,10 +96,12 @@ MainLoop:
 				case 10:
 					param.Value = &proto.Value{Index: 3, DoubleValue: dataStoreBundle.Data[idx].Data.Float64Value}
 				}
-				dataArray[idx] = &param
+				dataArray[dataArrayIdx] = &param
+				dataArrayIdx++
 			}
 		}
 		dataBundle.Parameters = dataArray
+		fmt.Printf("sending bundle: %v \n", dataBundle)
 		//error will occur when connection is closed; in which case we remove the channel as a receiver and exit the loop
 		err = stream.Send(&dataBundle)
 		if err != nil {
