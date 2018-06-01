@@ -123,9 +123,7 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 	//fmt.Printf("Request for command: %v\n", cmd)
 	var node string
 	var packetType int32
-	var sequence int32
 	var data []int32
-	var crc int32
 	var dataLength int
 	var command gstypes.Command
 
@@ -178,10 +176,7 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 		command = gstypes.Command{
 			Node:       node,
 			PacketType: packetType,
-			Sequence:   sequence,
-			Data:       dataBytes,
-			Crc:        int16(crc),
-		}
+			Data:       dataBytes}
 		srv.commandChannel <- command
 		ack.Success = true
 	}
