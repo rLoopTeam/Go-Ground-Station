@@ -6,7 +6,7 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
-	"net/http"
+	//"net/http"
 	_ "net/http/pprof"
 	"os"
 	"rloop/Go-Ground-Station/datastore"
@@ -19,9 +19,11 @@ import (
 )
 
 func main() {
-	go func() {
-		log.Println(http.ListenAndServe("localhost:8080", nil))
-	}()
+	/*
+		go func() {
+			log.Println(http.ListenAndServe("localhost:8080", nil))
+		}()
+	*/
 	fmt.Println("Backend version 13-04-2018")
 
 	//errors

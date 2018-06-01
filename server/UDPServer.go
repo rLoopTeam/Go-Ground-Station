@@ -17,13 +17,14 @@ type GSUDPServer interface {
 }
 
 type UDPBroadcasterServer struct {
-	hosts          []gstypes.Host
-	isRunningMutex sync.RWMutex
-	isRunning      bool
-	doRunMutex     sync.RWMutex
-	doRun          bool
-	signalChannel  chan bool
-	commandChannel <-chan gstypes.Command
+	hosts              []gstypes.Host
+	isRunningMutex     sync.RWMutex
+	isRunning          bool
+	doRunMutex         sync.RWMutex
+	doRun              bool
+	signalChannel      chan bool
+	commandChannel     <-chan gstypes.Command
+	podCommandSequence int32
 }
 
 type UDPListenerServer struct {
@@ -39,7 +40,7 @@ type UDPListenerServer struct {
 
 func (srv *UDPListenerServer) open(port int) error {
 	srv.ServerPort = port
-	s := []string{":", strconv.Itoa(port)}
+	s := []string{"127.0.0.2:", strconv.Itoa(port)}
 
 	udpPort := strings.Join(s, "")
 	udpAddr, err := net.ResolveUDPAddr("udp4", udpPort)
@@ -110,7 +111,7 @@ func (srv *UDPListenerServer) ProcessMessage(nodePort int, nodeName string, pack
 	defer func() {
 		if r := recover(); r != nil {
 			*errcount++
-			fmt.Printf("Problem with parsing packet on port %d in: %v \n", nodePort,r)
+			fmt.Printf("Problem with parsing packet on port %d in: %v \n", nodePort, r)
 			//fmt.Printf("errcount on nodeport %d: %d\n", nodePort,*errcount)
 		}
 	}()
@@ -127,7 +128,7 @@ func (srv *UDPListenerServer) ProcessMessage(nodePort int, nodeName string, pack
 		}
 
 	} else {
-		fmt.Println(err)
+		//fmt.Println(err)
 	}
 }
 
@@ -146,9 +147,13 @@ func (srv *UDPBroadcasterServer) Stop() {
 	srv.doRun = false
 }
 
+func (srv *UDPBroadcasterServer) ResetSequence() {
+	srv.podCommandSequence = 0
+}
+
 func (srv *UDPBroadcasterServer) broadcast() {
 	var cmd gstypes.Command
-	var destination *net.UDPAddr
+	//var destination *net.UDPAddr
 	var conn *net.UDPConn
 	var err error
 	var packetBytes []byte
@@ -174,33 +179,69 @@ BroadCastLoop:
 		//retrieve the next command from the channel
 		//lookup which port is to be used
 		port := nodesMap[cmd.Node]
-		addr := "127.0.0.1:" + port
+		//addr := fmt.Sprintf("127.0.0.1:%s", port)
 		//try to resolve the address
-		destination, _ = net.ResolveUDPAddr("udp", addr)
+		//destination, _ = net.ResolveUDPAddr("udp", addr)
+		intport, _ := strconv.Atoi(port)
 		//dial up, since it's udp shouldn't be a problem
-		conn, err = net.DialUDP("udp", nil, destination)
+		conn, err = net.DialUDP("udp", nil, &net.UDPAddr{IP: []byte{127, 0, 0, 1}, Port: intport, Zone: ""})
 		if err != nil {
 			fmt.Println(err)
-			err = nil
 		} else {
 			//if no conflicts on address, serialize the command
-			packetBytes, err = serialize(cmd)
+			packetBytes, err = srv.serialize(cmd)
 		}
 		//if there's no error with serialization, send the command
 		if err != nil {
 			fmt.Println(err)
-			err = nil
 		} else {
 			//fmt.Printf("\n sending command to node: %s on address %s \n", cmd.Node, destination.String())
+			//fmt.Printf("Data: %v \n", cmd.Data)
+			//fmt.Printf("command bytes: %v \n", packetBytes)
 			_, connErr = conn.Write(packetBytes)
 		}
 
 		if connErr != nil {
 			fmt.Printf("Command write error: %v", connErr)
+		} else {
+			srv.podCommandSequence++
 		}
 		conn.Close()
 	}
 	srv.isRunning = false
+}
+
+func (srv *UDPBroadcasterServer) serialize(cmd gstypes.Command) ([]byte, error) {
+	var err error
+	var packetTypeBytes []byte
+	var sequenceBytes []byte
+	var dataBytes []byte
+	var crcBytes []byte
+	var serializedPacket []byte
+	var crcLachFunc []byte
+
+	packetTypeBytes, err = helpers.ParseValueToBytes(cmd.PacketType)
+	sequenceBytes, err = helpers.ParseValueToBytes(srv.podCommandSequence)
+	dataBytes = cmd.Data
+	crcBytes, err = helpers.ParseValueToBytes(cmd.Crc)
+
+	serializedPacket = append(sequenceBytes, packetTypeBytes...)
+	serializedPacket = append(serializedPacket, dataBytes...)
+
+	crcLachFunc, err = helpers.Crc16Bytes(serializedPacket, uint32(len(serializedPacket)))
+
+	serializedPacket = append(serializedPacket, crcLachFunc...)
+
+	fmt.Printf("Sequence Value: %#x \n", sequenceBytes)
+	fmt.Printf("PacketType Value: %#x \n", packetTypeBytes)
+	fmt.Printf("Data Value: %#x \n\n", dataBytes)
+	fmt.Printf("Crc Value: %#x \n", crcBytes)
+	fmt.Printf("Packet Value: %#x \n\n", serializedPacket)
+
+	fmt.Printf("Crc Value: %#x \n", crcBytes)
+	fmt.Printf("Crc Custom Lach Value: %#x \n\n", crcLachFunc)
+
+	return serializedPacket, err
 }
 
 func (srv *UDPBroadcasterServer) GetStatus() (bool, bool) {
@@ -211,17 +252,6 @@ func (srv *UDPBroadcasterServer) GetStatus() (bool, bool) {
 	srv.isRunningMutex.RLock()
 	srv.doRunMutex.RLock()
 	return srv.isRunning, srv.doRun
-}
-
-func serialize(cmd gstypes.Command) ([]byte, error) {
-	var bytes []byte
-	var err error
-
-	packetType, err := helpers.ParseValueToBytes(cmd.PacketType)
-	data := cmd.Data
-	bytes = append(packetType, data...)
-
-	return bytes, err
 }
 
 func CreateNewUDPListenerServers(channel chan<- gstypes.PacketStoreElement, loggerChannel chan<- gstypes.PacketStoreElement, nodesPorts []int, nodesMap map[int]gstypes.Host) []*UDPListenerServer {

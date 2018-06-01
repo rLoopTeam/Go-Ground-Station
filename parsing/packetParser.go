@@ -3,6 +3,7 @@ package parsing
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"rloop/Go-Ground-Station/constants"
 	"rloop/Go-Ground-Station/gstypes"
 	"rloop/Go-Ground-Station/helpers"
@@ -23,11 +24,12 @@ func ParsePacket(nodePort int, nodeName string, packet []byte, errcount *int) (g
 	payload := packet[8:lastPayloadByteIndex]
 	//convert the bytes to int
 	packetType := binary.LittleEndian.Uint16(packetTypeBytes)
+	fmt.Printf("processing packet type: %#x on port: %d \n", packetType, nodePort)
 	//convert the bytes into int
 	payloadLength := binary.LittleEndian.Uint16(payloadLengthBytes)
 	payloadLengthInt := int(payloadLength)
 	//retrieve the definition of the packet
-	definition := constants.PacketDefinitions[packetType]
+	definition, ok := constants.PacketDefinitions[packetType]
 	//fmt.Printf("packet type: %d, packet meta: %v \n", packetType,definition.MetaData)
 	//make crc check and if correct proceed to parsing
 	//TODO: fix crc
@@ -39,7 +41,18 @@ func ParsePacket(nodePort int, nodeName string, packet []byte, errcount *int) (g
 			err = errors.New("CRC check failed")
 		}
 	*/
-	return ParsePayload(definition, payloadLengthInt, nodePort, nodeName, payload)
+	if ok && packetType != 512 {
+		/*		if packetType == 0x1003{
+				pp, err := ParsePayload(definition, payloadLengthInt, nodePort, nodeName, payload)
+				fmt.Printf("parsed packet: %v \n", pp.Parameters)
+				return pp, err
+			}*/
+		return ParsePayload(definition, payloadLengthInt, nodePort, nodeName, payload)
+	} else {
+		errmsg := fmt.Sprintf("packet type '%d' is not defined", packetType)
+		return gstypes.PacketStoreElement{}, errors.New(errmsg)
+	}
+
 }
 
 func ParsePayload(definition gstypes.PacketDefinition, payloadLength int, port int, nodeName string, payload []byte) (gstypes.PacketStoreElement, error) {
@@ -130,5 +143,6 @@ func ParsePayload(definition gstypes.PacketDefinition, payloadLength int, port i
 	}
 
 	packetStoreElement.Parameters = dataStoreElementArray.GetSlice()
+
 	return packetStoreElement, parseError
 }

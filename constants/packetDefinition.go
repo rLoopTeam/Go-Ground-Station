@@ -692,10 +692,14 @@ var (
 				{Name: "Validity Accel Valid", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Validity Velocity Valid", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Validity Displacement Valid", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
-				{Name: "Thresholding Active", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
-				{Name: "Thresholding Time", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
-				{Name: "Thresholding Accel", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
-				{Name: "Thresholding Counter", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "Accel Thresholding Active", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
+				{Name: "Accel Thresholding Time", Type: types.Uint16, Units: "", Size: 2, BeginLoop: false, EndLoop: false},
+				{Name: "Accel Thresholding Accel", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "Accel Thresholding Counter", Type: types.Uint16, Units: "", Size: 2, BeginLoop: false, EndLoop: false},
+				{Name: "Decel Thresholding Active", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
+				{Name: "Decel Thresholding Time", Type: types.Uint16, Units: "", Size: 2, BeginLoop: false, EndLoop: false},
+				{Name: "Decel Thresholding Accel", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "Decel Thresholding Counter", Type: types.Uint16, Units: "", Size: 2, BeginLoop: false, EndLoop: false},
 			}},
 		0x1201: {
 			map[string]gstypes.NodeInfo{
@@ -876,8 +880,11 @@ var (
 			[]gstypes.Param{
 				{Name: "All Flags", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "FCU Mission State", Type: types.Uint16, Units: "", Size: 2, BeginLoop: false, EndLoop: false},
-				{Name: "FCU Mission TrackDB", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
+				{Name: "FCU Mission TrackDB", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Pod Health Fault Flags", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "Accel Fault Flags", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "MMA8451 0", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "MMA8451 1", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 			}},
 		0x300: {
 			map[string]gstypes.NodeInfo{

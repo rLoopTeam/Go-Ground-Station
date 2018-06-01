@@ -79,7 +79,9 @@ type DataStoreBundle struct {
 type Command struct {
 	Node       string
 	PacketType int32
+	Sequence   int32
 	Data       []byte
+	Crc        int16
 }
 
 type ReceiversCoordination struct {
@@ -133,7 +135,7 @@ type ServerControlWithTimeout struct {
 }
 
 type SimulatorInitWithResponse struct {
-	SimInit       *proto.SimInit
+	SimInit      *proto.SimInit
 	ResponseChan chan *proto.Ack
 }
 

@@ -19,7 +19,7 @@ type GRPCServer struct {
 	serviceChan            chan<- gstypes.ServerControlWithTimeout
 	commandChannel         chan<- gstypes.Command
 	simCommandChannel      chan<- *gstypes.SimulatorCommandWithResponse
-	simInitChannel       chan<- *gstypes.SimulatorInitWithResponse
+	simInitChannel         chan<- *gstypes.SimulatorInitWithResponse
 	receiversChannelHolder *ChannelsHolder
 	statusProvider         StatusProvider
 }
@@ -60,9 +60,9 @@ func (srv *GRPCServer) StreamPackets(req *proto.StreamRequest, stream proto.Grou
 	receiverChannel := make(chan gstypes.DataStoreBundle, 32)
 	srv.addChannelToDatastoreQueue(receiverChannel)
 	dataArrayLength = len(req.Parameters)
-	if !req.All{
-		requestedParameters = map[string]struct{} {}
-		for _, p := range req.Parameters{
+	if !req.All {
+		requestedParameters = map[string]struct{}{}
+		for _, p := range req.Parameters {
 			requestedParameters[p] = struct{}{}
 		}
 	}
@@ -101,7 +101,7 @@ MainLoop:
 			}
 		}
 		dataBundle.Parameters = dataArray
-		fmt.Printf("sending bundle: %v \n", dataBundle)
+		//fmt.Printf("sending bundle: %v \n", dataBundle)
 		//error will occur when connection is closed; in which case we remove the channel as a receiver and exit the loop
 		err = stream.Send(&dataBundle)
 		if err != nil {
@@ -123,7 +123,9 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 	//fmt.Printf("Request for command: %v\n", cmd)
 	var node string
 	var packetType int32
+	var sequence int32
 	var data []int32
+	var crc int32
 	var dataLength int
 	var command gstypes.Command
 
@@ -151,18 +153,18 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 	//if there's no data or not enough data populate the remaining byte slots with zero value
 	//not necessary action
 	/*
-	for idx := dataLength; idx < 4; idx++ {
-		var value int32 = 0
-		buf := new(bytes.Buffer)
-		err := binary.Write(buf, binary.LittleEndian, value)
-		if err != nil {
-			ack.Success = false
-			ack.Message = err.Error()
-			goto returnStatement
-		} else {
-			dataBytesArray[idx] = buf.Bytes()
+		for idx := dataLength; idx < 4; idx++ {
+			var value int32 = 0
+			buf := new(bytes.Buffer)
+			err := binary.Write(buf, binary.LittleEndian, value)
+			if err != nil {
+				ack.Success = false
+				ack.Message = err.Error()
+				goto returnStatement
+			} else {
+				dataBytesArray[idx] = buf.Bytes()
+			}
 		}
-	}
 	*/
 
 	dataBytes = helpers.AppendVariadic(dataBytesArray...)
@@ -176,7 +178,9 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 		command = gstypes.Command{
 			Node:       node,
 			PacketType: packetType,
+			Sequence:   sequence,
 			Data:       dataBytes,
+			Crc:        int16(crc),
 		}
 		srv.commandChannel <- command
 		ack.Success = true
@@ -235,7 +239,7 @@ func (srv *GRPCServer) InitSim(ctx context.Context, in *proto.SimInit) (*proto.A
 
 	req = &gstypes.SimulatorInitWithResponse{
 		ResponseChan: responseChan,
-		SimInit:       in}
+		SimInit:      in}
 
 	srv.simInitChannel <- req
 	ack = <-responseChan
@@ -278,7 +282,7 @@ func newGroundStationGrpcServer(grpcChannelsHolder *ChannelsHolder, commandChann
 		serviceChan:            serviceChan,
 		statusProvider:         statusProvider,
 		simCommandChannel:      simCommandChannel,
-		simInitChannel:       simInitChannel}
+		simInitChannel:         simInitChannel}
 	return srv
 }
 
