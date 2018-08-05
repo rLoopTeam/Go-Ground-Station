@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"go/types"
 	"rloop/Go-Ground-Station/gstypes"
-	"golang.org/x/text/encoding/unicode"
 )
 
 func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStoreUnit, error) {
@@ -114,6 +113,6 @@ func ParseValueToBytes(value interface{}) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-func ToByteOrder(bytes *[]byte, order interface{}){
+func ToByteOrder(bytes *[]byte, order interface{}) {
 
 }

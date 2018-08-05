@@ -1230,6 +1230,6 @@ var (
 	}
 
 	/*
-	Commands = map[string][]byte{
-		"Full Accel Start Stream": []byte{0x0100100,0x00000001,0x1003,0x0,0x0}}*/
+		Commands = map[string][]byte{
+			"Full Accel Start Stream": []byte{0x0100100,0x00000001,0x1003,0x0,0x0}}*/
 )

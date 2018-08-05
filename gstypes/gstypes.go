@@ -77,9 +77,9 @@ type DataStoreBundle struct {
 }
 
 type Command struct {
-	Node       string
-	PacketType int32
-	Data       []byte
+	Node        string
+	PacketType  int32
+	Data        []byte
 	CommandName string
 }
 
