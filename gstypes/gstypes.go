@@ -80,6 +80,7 @@ type Command struct {
 	Node       string
 	PacketType int32
 	Data       []byte
+	CommandName string
 }
 
 type ReceiversCoordination struct {
@@ -133,7 +134,7 @@ type ServerControlWithTimeout struct {
 }
 
 type SimulatorInitWithResponse struct {
-	SimInit       *proto.SimInit
+	SimInit      *proto.SimInit
 	ResponseChan chan *proto.Ack
 }
 

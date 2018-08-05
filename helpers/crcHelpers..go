@@ -1,45 +1,36 @@
 package helpers
 
 import (
-	"fmt"
-	"github.com/howeyc/crc16"
-	"go/types"
+	"encoding/binary"
+	"rloop/Go-Ground-Station/constants"
 )
 
-func IsCrc16Check(payloadlength int, payload []byte, payloadCrc []byte) (bool, error) {
+func IsCrc16Check(dataCrc []byte, data []byte, dataLength uint32) (bool, error) {
+	var result bool
+	var err error
+	var u16CRCVal uint16
+	var u16CRCCalculatedVal uint16
 
-	result := false
-	var err error = nil
-	var payloadCrcValue uint16
-	payloadCrcStoreUnit, err := ParseByteToValue(types.Uint16, payloadCrc)
-	payloadCrcValue = payloadCrcStoreUnit.Uint16Value
-	controlCrc := crc16.ChecksumCCITTFalse(payload)
+	u16CRCVal = binary.LittleEndian.Uint16(dataCrc)
+	u16CRCCalculatedVal = Crc16Val(data, dataLength)
 
-	result = controlCrc == payloadCrcValue
+	result = u16CRCVal == u16CRCCalculatedVal
 
-	fmt.Printf("Payload crc bytes: %v\n", payloadCrc)
-	fmt.Printf("Payload crc: %v\n", payloadCrcValue)
-	fmt.Printf("Control crc: %v\n", controlCrc)
-
-	/*
-		var crc uint16 = 0x00
-		var j uint16
-		var c uint8
-
-		for i := 0; i < payloadlength; i++ {
-			c = payload[i];
-			if c > 255 {
-				err = errors.New("out of range")
-				break
-				}
-
-			j = ((crc >> 8) ^ c) & 0xFF
-			crc = constants.U16SWCRC_CRC_TABLE[j] ^ (crc << 8)
-		}
-
-		if(err == nil){
-			result = crc == crcIntValue
-		}
-	*/
 	return result, err
+}
+
+func Crc16Val(data []byte, u32Length uint32) uint16 {
+	var u16CRC uint16
+	var u32Counter uint32
+	u16CRC = 0
+
+	for u32Counter = 0; u32Counter < u32Length; u32Counter++ {
+		idx := ((u16CRC >> 8) ^ uint16(data[u32Counter])) & 0xFF
+		u16CRC = constants.U16SWCRC_CRC_TABLE[idx] ^ (u16CRC << 8)
+	}
+	return u16CRC
+}
+
+func Crc16Bytes(data []byte, u32Length uint32) ([]byte, error) {
+	return ParseValueToBytes(Crc16Val(data, u32Length))
 }

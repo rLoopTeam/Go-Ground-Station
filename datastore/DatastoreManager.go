@@ -1,6 +1,7 @@
 package datastore
 
 import (
+	"Go-Ground-Station/constants"
 	"fmt"
 	"rloop/Go-Ground-Station/gsgrpc"
 	"rloop/Go-Ground-Station/gstypes"
@@ -8,7 +9,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"Go-Ground-Station/constants"
 )
 
 type DataStoreManager struct {
@@ -61,17 +61,17 @@ MainLoop:
 	manager.isRunning = false
 }
 
-func (manager *DataStoreManager) initDataStore(){
+func (manager *DataStoreManager) initDataStore() {
 	var dataBundle gstypes.DataStoreBundle
 	var arr []gstypes.DataStoreElement
 	var preCount = 0
 	var count = 0
 
-	for _,definition := range constants.PacketDefinitions {
+	for _, definition := range constants.PacketDefinitions {
 		preCount += len(definition.Parameters)
 	}
 	preCount = preCount * 2
-	arr = make([]gstypes.DataStoreElement,preCount)
+	arr = make([]gstypes.DataStoreElement, preCount)
 
 	for _, definition := range constants.PacketDefinitions {
 		for _, node := range definition.MetaData {
@@ -147,9 +147,6 @@ func (manager *DataStoreManager) UpdateDatastoreElement(element *gstypes.DataSto
 	case 3:
 		element.Data.Int64Value = int64(element.Data.Int32Value)
 		element.Data.ValueIndex = 4
-	case 4:
-		element.Data.Int64Value = element.Data.Int64Value
-		element.Data.ValueIndex = 4
 	case 5:
 		element.Data.Uint64Value = uint64(element.Data.Uint8Value)
 		element.Data.ValueIndex = 8
@@ -159,14 +156,8 @@ func (manager *DataStoreManager) UpdateDatastoreElement(element *gstypes.DataSto
 	case 7:
 		element.Data.Uint64Value = uint64(element.Data.Uint32Value)
 		element.Data.ValueIndex = 8
-	case 8:
-		element.Data.Uint64Value = element.Data.Uint64Value
-		element.Data.ValueIndex = 8
 	case 9:
 		element.Data.Float64Value = float64(element.Data.FloatValue)
-		element.Data.ValueIndex = 10
-	case 10:
-		element.Data.Float64Value = element.Data.Float64Value
 		element.Data.ValueIndex = 10
 	}
 }
@@ -212,7 +203,7 @@ func (manager *DataStoreManager) saveToDataStore(dataBundle gstypes.DataStoreBun
 	}
 }
 
-func (manager *DataStoreManager) sendDatastoreUpdate(){
+func (manager *DataStoreManager) sendDatastoreUpdate() {
 	dataBundle := gstypes.DataStoreBundle{}
 	dataBundle.Data = make([]gstypes.DataStoreElement, len(manager.rtData))
 
@@ -221,17 +212,7 @@ func (manager *DataStoreManager) sendDatastoreUpdate(){
 		dataBundle.Data[idx] = value
 		idx++
 	}
-
-	manager.receiversChannelHolder.ReceiverMutex.Lock()
-	//send the bundle to all subscribers
-	for channel := range manager.receiversChannelHolder.Receivers {
-		select {
-		case *channel <- dataBundle:
-		default:
-			fmt.Printf("streamerchannel is full \n")
-		}
-	}
-	manager.receiversChannelHolder.ReceiverMutex.Unlock()
+	manager.sendDataBundle(dataBundle)
 }
 
 func (manager *DataStoreManager) sendDataBundle(dataBundle gstypes.DataStoreBundle) {

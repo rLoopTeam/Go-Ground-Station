@@ -18,7 +18,7 @@ type SimController struct {
 	client      simproto.SimControlClient
 	signalChan  chan bool
 	commandChan <-chan *gstypes.SimulatorCommandWithResponse
-	simInitChan  <-chan *gstypes.SimulatorInitWithResponse
+	simInitChan <-chan *gstypes.SimulatorInitWithResponse
 }
 
 func (client *SimController) Stop() {
@@ -84,7 +84,7 @@ func (client *SimController) SendCommand(cmd *gstypes.SimulatorCommandWithRespon
 	if err != nil {
 		log.Printf("SimControl send failed: %v \n", err)
 		rack.Success = false
-	}else if ack == nil{
+	} else if ack == nil {
 		rack.Success = false
 		rack.Message = ctx.Err().Error()
 	} else {
@@ -121,8 +121,8 @@ func (controller *SimController) InitSim(initWithResponse *gstypes.SimulatorInit
 
 	for idx, cfg := range initWithResponse.SimInit.ConfigParams {
 		config_params_arr[idx] = &simproto.ConfigParameter{
-			ConfigPath:cfg.ConfigPath,
-			Value:cfg.Value}
+			ConfigPath: cfg.ConfigPath,
+			Value:      cfg.Value}
 	}
 
 	simInitConfig.ConfigParams = config_params_arr
@@ -160,7 +160,7 @@ func NewSimController() (*SimController, chan<- *gstypes.SimulatorCommandWithRes
 	controller := &SimController{
 		signalChan:  signalCh,
 		commandChan: commandCh,
-		simInitChan:  simInitCh,
+		simInitChan: simInitCh,
 		IsRunning:   false,
 		doRun:       false}
 	return controller, commandCh, simInitCh

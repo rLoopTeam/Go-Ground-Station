@@ -34,6 +34,7 @@ message StartLogCommand {
 
 message Command {
     string Node = 1;
+    string commandName= 4;
     int32 PacketType = 2;
     repeated int32 Data = 3;
 }

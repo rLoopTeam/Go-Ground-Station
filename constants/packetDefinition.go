@@ -692,10 +692,14 @@ var (
 				{Name: "Validity Accel Valid", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Validity Velocity Valid", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Validity Displacement Valid", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
-				{Name: "Thresholding Active", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
-				{Name: "Thresholding Time", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
-				{Name: "Thresholding Accel", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
-				{Name: "Thresholding Counter", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "Accel Thresholding Active", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
+				{Name: "Accel Thresholding Time", Type: types.Uint16, Units: "", Size: 2, BeginLoop: false, EndLoop: false},
+				{Name: "Accel Thresholding Accel", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "Accel Thresholding Counter", Type: types.Uint16, Units: "", Size: 2, BeginLoop: false, EndLoop: false},
+				{Name: "Decel Thresholding Active", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
+				{Name: "Decel Thresholding Time", Type: types.Uint16, Units: "", Size: 2, BeginLoop: false, EndLoop: false},
+				{Name: "Decel Thresholding Accel", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "Decel Thresholding Counter", Type: types.Uint16, Units: "", Size: 2, BeginLoop: false, EndLoop: false},
 			}},
 		0x1201: {
 			map[string]gstypes.NodeInfo{
@@ -876,8 +880,11 @@ var (
 			[]gstypes.Param{
 				{Name: "All Flags", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "FCU Mission State", Type: types.Uint16, Units: "", Size: 2, BeginLoop: false, EndLoop: false},
-				{Name: "FCU Mission TrackDB", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
+				{Name: "FCU Mission TrackDB", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Pod Health Fault Flags", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "Accel Fault Flags", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "MMA8451 0", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "MMA8451 1", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 			}},
 		0x300: {
 			map[string]gstypes.NodeInfo{
@@ -938,7 +945,7 @@ var (
 				{Name: "Lead Screw mm 1 Target", Type: types.Float32, Units: "mm", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Lead Screw um 1 Target", Type: types.Uint32, Units: "um", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "I Beam mm 1 Current", Type: types.Float32, Units: "mm", Size: 4, BeginLoop: false, EndLoop: false},
-				{Name: "Lead Screw mm 1 Current", Type: types.Float32, Units: "mm", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "Lead Screw mm 1 Position", Type: types.Float32, Units: "mm", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "MLP 1 Current", Type: types.Float32, Units: "mm", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Spare 1_1", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Spare 1_2", Type: types.Uint32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
@@ -955,6 +962,7 @@ var (
 				{Name: "Linear Velocity 1", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Linear Acceleration 1", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Current Position 1", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "Limit Interrupt 1", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
 				{Name: "Fault Flags 2", Type: types.Uint32, Units: "A", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "I Beam mm 2 Target", Type: types.Float32, Units: "mm", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Lead Screw mm 2 Target", Type: types.Float32, Units: "mm", Size: 4, BeginLoop: false, EndLoop: false},
@@ -977,6 +985,7 @@ var (
 				{Name: "Linear Velocity 2", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Linear Acceleration 2", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
 				{Name: "Current Position 2", Type: types.Int32, Units: "", Size: 4, BeginLoop: false, EndLoop: false},
+				{Name: "Limit Interrupt 2", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
 				{Name: "State", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
 				{Name: "Calibration State", Type: types.Uint8, Units: "", Size: 1, BeginLoop: false, EndLoop: false},
 			}},
@@ -1219,4 +1228,7 @@ var (
 		16396: {"FCU DAQ ACCEL 1 VELOCITY", 16396, "Flight Control", true, types.Int32, 4},
 		16397: {"FCU DAQ ACCEL 1 DISPLACEMENT", 16397, "Flight Control", true, types.Int32, 4},
 	}
+
+	Commands = map[string][]byte{
+		"Full Accel Start Stream": []byte{0x0100100,0x00000001,0x1003,0x0,0x0}}
 )

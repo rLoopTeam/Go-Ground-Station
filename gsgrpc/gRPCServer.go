@@ -19,7 +19,7 @@ type GRPCServer struct {
 	serviceChan            chan<- gstypes.ServerControlWithTimeout
 	commandChannel         chan<- gstypes.Command
 	simCommandChannel      chan<- *gstypes.SimulatorCommandWithResponse
-	simInitChannel       chan<- *gstypes.SimulatorInitWithResponse
+	simInitChannel         chan<- *gstypes.SimulatorInitWithResponse
 	receiversChannelHolder *ChannelsHolder
 	statusProvider         StatusProvider
 }
@@ -56,13 +56,13 @@ func (srv *GRPCServer) StreamPackets(req *proto.StreamRequest, stream proto.Grou
 	var pushCurrentDataStoreElement bool
 	var requestedParameters map[string]struct{}
 	var dataStoreBundleLength int
-	receiverChannel := make(chan gstypes.DataStoreBundle, 32)
+	var dataArrayIdx int
+	receiverChannel := make(chan gstypes.DataStoreBundle, 8)
 	srv.addChannelToDatastoreQueue(receiverChannel)
-	fmt.Println("gsgrpc channel pushed to map")
 	dataArrayLength = len(req.Parameters)
-	if !req.All{
-		requestedParameters = map[string]struct{} {}
-		for _, p := range req.Parameters{
+	if !req.All {
+		requestedParameters = map[string]struct{}{}
+		for _, p := range req.Parameters {
 			requestedParameters[p] = struct{}{}
 		}
 	}
@@ -77,15 +77,16 @@ MainLoop:
 		}
 		dataBundle := proto.DataBundle{}
 		dataArray := make([]*proto.Params, dataArrayLength)
-
+		dataArrayIdx = 0
 		for idx := 0; idx < dataStoreBundleLength; idx++ {
 			if !req.All {
 				_, pushCurrentDataStoreElement = requestedParameters[dataStoreBundle.Data[idx].FullParameterName]
 			}
+			//fmt.Printf("push to element: %v \n", pushCurrentDataStoreElement)
 			if pushCurrentDataStoreElement {
 				param := proto.Params{}
 				param.RxTime = dataStoreBundle.Data[idx].RxTime
-				param.ParamName = dataStoreBundle.Data[idx].ParameterName
+				param.ParamName = dataStoreBundle.Data[idx].FullParameterName
 				param.PacketName = dataStoreBundle.Data[idx].PacketName
 				switch dataStoreBundle.Data[idx].Data.ValueIndex {
 				case 4:
@@ -95,10 +96,12 @@ MainLoop:
 				case 10:
 					param.Value = &proto.Value{Index: 3, DoubleValue: dataStoreBundle.Data[idx].Data.Float64Value}
 				}
-				dataArray[idx] = &param
+				dataArray[dataArrayIdx] = &param
+				dataArrayIdx++
 			}
 		}
 		dataBundle.Parameters = dataArray
+		//fmt.Printf("sending bundle: %v \n", dataBundle)
 		//error will occur when connection is closed; in which case we remove the channel as a receiver and exit the loop
 		err = stream.Send(&dataBundle)
 		if err != nil {
@@ -148,18 +151,18 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 	//if there's no data or not enough data populate the remaining byte slots with zero value
 	//not necessary action
 	/*
-	for idx := dataLength; idx < 4; idx++ {
-		var value int32 = 0
-		buf := new(bytes.Buffer)
-		err := binary.Write(buf, binary.LittleEndian, value)
-		if err != nil {
-			ack.Success = false
-			ack.Message = err.Error()
-			goto returnStatement
-		} else {
-			dataBytesArray[idx] = buf.Bytes()
+		for idx := dataLength; idx < 4; idx++ {
+			var value int32 = 0
+			buf := new(bytes.Buffer)
+			err := binary.Write(buf, binary.LittleEndian, value)
+			if err != nil {
+				ack.Success = false
+				ack.Message = err.Error()
+				goto returnStatement
+			} else {
+				dataBytesArray[idx] = buf.Bytes()
+			}
 		}
-	}
 	*/
 
 	dataBytes = helpers.AppendVariadic(dataBytesArray...)
@@ -173,8 +176,7 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 		command = gstypes.Command{
 			Node:       node,
 			PacketType: packetType,
-			Data:       dataBytes,
-		}
+			Data:       dataBytes}
 		srv.commandChannel <- command
 		ack.Success = true
 	}
@@ -232,7 +234,7 @@ func (srv *GRPCServer) InitSim(ctx context.Context, in *proto.SimInit) (*proto.A
 
 	req = &gstypes.SimulatorInitWithResponse{
 		ResponseChan: responseChan,
-		SimInit:       in}
+		SimInit:      in}
 
 	srv.simInitChannel <- req
 	ack = <-responseChan
@@ -275,7 +277,7 @@ func newGroundStationGrpcServer(grpcChannelsHolder *ChannelsHolder, commandChann
 		serviceChan:            serviceChan,
 		statusProvider:         statusProvider,
 		simCommandChannel:      simCommandChannel,
-		simInitChannel:       simInitChannel}
+		simInitChannel:         simInitChannel}
 	return srv
 }
 
