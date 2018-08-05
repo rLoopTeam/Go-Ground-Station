@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"rloop/Go-Ground-Station/constants"
 )
 
 type GSUDPServer interface {
@@ -145,7 +144,6 @@ func (srv *UDPBroadcasterServer) ResetSequence() {
 	srv.podCommandSequence = 0
 }
 
-
 //The broadcast method has a main loop that pulls the messages from the 'commandChannel' channel
 //and successively serializes and sends them
 func (srv *UDPBroadcasterServer) broadcast() {
@@ -207,7 +205,6 @@ BroadCastLoop:
 	}
 	srv.isRunning = false
 }
-
 
 //this function serializes the command to be sent, it uses the sequence stored in the server struct
 //parameter 'cmd' is the command variable to be serialized
