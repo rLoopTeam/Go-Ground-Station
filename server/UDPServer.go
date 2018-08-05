@@ -222,7 +222,8 @@ func (srv *UDPBroadcasterServer) serialize(cmd gstypes.Command) ([]byte, error) 
 
 	packetTypeBytes, err = helpers.ParseValueToBytes(cmd.PacketType)
 	sequenceBytes, err = helpers.ParseValueToBytes(srv.podCommandSequence)
-	dataBytes = constants.Commands[cmd.CommandName]
+	dataBytes = cmd.Data
+	//dataBytes = constants.Commands[cmd.CommandName]
 
 	serializedPacket = append(sequenceBytes, packetTypeBytes...)
 	serializedPacket = append(serializedPacket, dataBytes...)

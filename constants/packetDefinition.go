@@ -1229,6 +1229,7 @@ var (
 		16397: {"FCU DAQ ACCEL 1 DISPLACEMENT", 16397, "Flight Control", true, types.Int32, 4},
 	}
 
+	/*
 	Commands = map[string][]byte{
-		"Full Accel Start Stream": []byte{0x0100100,0x00000001,0x1003,0x0,0x0}}
+		"Full Accel Start Stream": []byte{0x0100100,0x00000001,0x1003,0x0,0x0}}*/
 )
