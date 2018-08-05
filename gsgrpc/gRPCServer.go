@@ -57,7 +57,7 @@ func (srv *GRPCServer) StreamPackets(req *proto.StreamRequest, stream proto.Grou
 	var requestedParameters map[string]struct{}
 	var dataStoreBundleLength int
 	var dataArrayIdx int
-	receiverChannel := make(chan gstypes.DataStoreBundle, 32)
+	receiverChannel := make(chan gstypes.DataStoreBundle, 8)
 	srv.addChannelToDatastoreQueue(receiverChannel)
 	dataArrayLength = len(req.Parameters)
 	if !req.All {

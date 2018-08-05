@@ -80,6 +80,7 @@ type Command struct {
 	Node       string
 	PacketType int32
 	Data       []byte
+	CommandName string
 }
 
 type ReceiversCoordination struct {
