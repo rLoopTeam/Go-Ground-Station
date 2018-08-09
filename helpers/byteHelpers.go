@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"go/types"
-	"rloop/Go-Ground-Station/gstypes"
+	"rloop/Go-Ground-Station-1/gstypes"
 )
 
 func ParseByteToValue(valueType types.BasicKind, slice []byte) (gstypes.DataStoreUnit, error) {

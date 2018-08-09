@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"google.golang.org/grpc"
 	"log"
-	"rloop/Go-Ground-Station/gstypes"
-	"rloop/Go-Ground-Station/proto"
-	"rloop/Go-Ground-Station/simproto"
+	"rloop/Go-Ground-Station-1/gstypes"
+	"rloop/Go-Ground-Station-1/proto"
+	"rloop/Go-Ground-Station-1/simproto"
 	"time"
 )
 

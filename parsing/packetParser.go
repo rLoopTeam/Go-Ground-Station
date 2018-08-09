@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"rloop/Go-Ground-Station/constants"
-	"rloop/Go-Ground-Station/gstypes"
-	"rloop/Go-Ground-Station/helpers"
+	"rloop/Go-Ground-Station-1/constants"
+	"rloop/Go-Ground-Station-1/gstypes"
+	"rloop/Go-Ground-Station-1/helpers"
 	"time"
 )
 

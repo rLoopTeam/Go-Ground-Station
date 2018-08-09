@@ -1,10 +1,10 @@
 package datastore
 
 import (
-	"Go-Ground-Station/constants"
+	"rloop/Go-Ground-Station-1/constants"
 	"fmt"
-	"rloop/Go-Ground-Station/gsgrpc"
-	"rloop/Go-Ground-Station/gstypes"
+	"rloop/Go-Ground-Station-1/gsgrpc"
+	"rloop/Go-Ground-Station-1/gstypes"
 	"runtime"
 	"strings"
 	"sync"
