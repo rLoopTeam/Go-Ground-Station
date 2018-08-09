@@ -7,9 +7,9 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"net"
-	"rloop/Go-Ground-Station/gstypes"
-	"rloop/Go-Ground-Station/helpers"
-	"rloop/Go-Ground-Station/proto"
+	"rloop/Go-Ground-Station-1/gstypes"
+	"rloop/Go-Ground-Station-1/helpers"
+	"rloop/Go-Ground-Station-1/proto"
 	"strconv"
 	"sync"
 	//"time"
@@ -121,14 +121,20 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 	//any error encountered will be pushed into this variable and returned immediately to the sender
 	var err error
 	//fmt.Printf("Request for command: %v\n", cmd)
+	var origin string
 	var node string
+	var commandName string
+	var commandId int32
 	var packetType int32
 	var data []int32
 	var dataLength int
 	var command gstypes.Command
 
 	ack = &proto.Ack{}
+	origin = cmd.Origin
 	node = cmd.Node
+	commandName = cmd.CommandName
+	commandId = cmd.CommandId
 	packetType = cmd.PacketType
 	data = cmd.Data
 	dataLength = len(data)
@@ -174,9 +180,12 @@ func (srv *GRPCServer) SendCommand(ctx context.Context, cmd *proto.Command) (*pr
 
 	if err == nil {
 		command = gstypes.Command{
+			Origin:		origin,
 			Node:       node,
 			PacketType: packetType,
-			Data:       dataBytes}
+			Data:       dataBytes,
+			CommandName:commandName,
+			CommandId:	commandId}
 		srv.commandChannel <- command
 		ack.Success = true
 	}

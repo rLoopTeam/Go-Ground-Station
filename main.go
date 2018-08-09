@@ -9,12 +9,12 @@ import (
 	//"net/http"
 	_ "net/http/pprof"
 	"os"
-	"rloop/Go-Ground-Station/datastore"
-	"rloop/Go-Ground-Station/gsgrpc"
-	"rloop/Go-Ground-Station/gstypes"
-	"rloop/Go-Ground-Station/helpers"
-	"rloop/Go-Ground-Station/logging"
-	"rloop/Go-Ground-Station/server"
+	"rloop/Go-Ground-Station-1/datastore"
+	"rloop/Go-Ground-Station-1/gsgrpc"
+	"rloop/Go-Ground-Station-1/gstypes"
+	"rloop/Go-Ground-Station-1/helpers"
+	"rloop/Go-Ground-Station-1/logging"
+	"rloop/Go-Ground-Station-1/server"
 	"strconv"
 )
 
@@ -24,7 +24,7 @@ func main() {
 			log.Println(http.ListenAndServe("localhost:8080", nil))
 		}()
 	*/
-	fmt.Println("Backend version 13-04-2018")
+	fmt.Println("Backend version 09-08-2018")
 
 	//errors
 	var networkConfigError error
