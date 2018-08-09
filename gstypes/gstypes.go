@@ -3,7 +3,7 @@ package gstypes
 import (
 	"context"
 	"go/types"
-	"rloop/Go-Ground-Station/proto"
+	"rloop/Go-Ground-Station-1/proto"
 	"sync"
 )
 
@@ -77,10 +77,12 @@ type DataStoreBundle struct {
 }
 
 type Command struct {
+	Origin string
 	Node        string
 	PacketType  int32
 	Data        []byte
 	CommandName string
+	CommandId	int32
 }
 
 type ReceiversCoordination struct {

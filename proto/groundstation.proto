@@ -33,10 +33,12 @@ message StartLogCommand {
 }
 
 message Command {
-    string Node = 1;
-    string commandName= 4;
-    int32 PacketType = 2;
-    repeated int32 Data = 3;
+    string Origin = 1;
+    string Node = 2;
+    string CommandName= 3;
+    int32 CommandId = 4;
+    int32 PacketType = 5;
+    repeated int32 Data = 6;
 }
 
 message SimCommand {

@@ -2,7 +2,7 @@ package helpers
 
 import (
 	"encoding/binary"
-	"rloop/Go-Ground-Station/constants"
+	"rloop/Go-Ground-Station-1/constants"
 )
 
 func IsCrc16Check(dataCrc []byte, data []byte, dataLength uint32) (bool, error) {
